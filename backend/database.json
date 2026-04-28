@@ -1,0 +1,18 @@
+{
+  "dev": {
+    "driver": "pg",
+    "host": "127.0.0.1",
+    "port": 5432,
+    "database": "genealogy_tree_db",
+    "username": "postgres",
+    "password": "1"
+  },
+  "prod": {
+    "driver": "pg",
+    "host": "production-host",
+    "port": 5432,
+    "database": "genealogy_tree_db",
+    "username": "prod_user",
+    "password": "prod_password"
+  }
+}
