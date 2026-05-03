@@ -5,7 +5,7 @@
     "port": 5432,
     "database": "genealogy_tree_db",
     "username": "postgres",
-    "password": "1"
+    "password": { "ENV": "POSTGRES_DEV_PASSWORD" }
   },
   "prod": {
     "driver": "pg",
@@ -13,6 +13,6 @@
     "port": 5432,
     "database": "genealogy_tree_db",
     "username": "prod_user",
-    "password": "prod_password"
+    "password": { "ENV": "POSTGRES_PROD_PASSWORD" }
   }
 }
