@@ -1,0 +1,177 @@
+type Surname {
+  id: ID!
+  value: String!
+}
+
+type MaidenSurname {
+  id: ID!
+  value: String!
+}
+
+type Country {
+  id: ID!
+  name: String!
+}
+
+type Region {
+  id: ID!
+  name: String!
+  country: Country!
+}
+
+type City {
+  id: ID!
+  name: String!
+  region: Region!
+}
+
+type Street {
+  id: ID!
+  name: String!
+  city: City!
+}
+
+type House {
+  id: ID!
+  street: Street!
+  name: String!
+}
+
+type Apartment {
+  id: ID!
+  house: House!
+  name: String!
+}
+
+type Nationality {
+  id: ID!
+  name: String!
+}
+
+type SocialStatus {
+  id: ID!
+  name: String!
+  description: String
+}
+
+# ========== АДРЕСНЫЕ ТИПЫ (ДЛЯ УДОБСТВА КЛИЕНТА) ==========
+
+type BirthPlace {
+  country: Country
+  region: Region
+  city: City
+  street: Street
+  house: House
+  apartment: Apartment
+  fullAddress: String
+}
+
+type DeathPlace {
+  country: Country
+  region: Region
+  city: City
+  fullAddress: String
+}
+
+enum Gender {
+  male,
+  female
+}
+
+type Person {
+  id: ID!
+  
+  # Основные данные
+  surname: Surname!
+  maidenSurname: MaidenSurname
+  firstName: String!
+  patronymic: String
+  gender: Gender
+  
+  # Дата рождения
+  birthDate: Date
+  birthDateApprox: Boolean!
+  birthPlace: BirthPlace!
+  
+  # Дата смерти
+  deathDate: Date
+  deathDateApprox: Boolean!
+  deathPlace: DeathPlace
+  
+  # Характеристики
+  nationality: Nationality
+  socialStatus: SocialStatus
+  
+  # Био и источники
+  bio: String
+  sourceInfo: String
+  isPersonContacted: Boolean!
+  
+  # Метаданные
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  
+  # Вычисляемые поля
+  fullName: String!
+  age: Int
+  isAlive: Boolean!
+  lifeSpan: String
+}
+
+type Relation {
+  father_id: ID!
+  mother_id: ID!
+  child_id: ID!
+  marrige_status: String!
+}
+
+# inputs
+
+input createUserInput {
+    username: String!
+    email: String!
+    password: String!
+    role: String!
+    is_blocked: Boolean!
+}
+
+input createPersonInput {
+  surname: ID!
+  maiden_surname: ID
+  name: String!
+  patronymic: String
+  gender: String!
+  
+  birthDate: Date
+  birthDateApprox: Boolean!
+  birthPlace: BirthPlace!
+
+  deathDate: Date
+  deathDateApprox: Boolean!
+  deathPlace: DeathPlace
+
+  nationality: String
+  socialStatus: String
+
+  bio: String
+  sourceInfo: String
+  isPersonContacted: Boolean!
+}
+
+# query и mutations
+type Query {
+  users: [User!]!
+  user(id: ID!): User
+  
+  person(id: ID!): Person
+
+}
+type Mutation {
+  createUser(
+    input: createuserInput!
+  ): User!
+  createPerson(
+    input: createPersonInput!
+  ): Person!
+}
+

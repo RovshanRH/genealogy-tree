@@ -11,6 +11,9 @@ importers:
       vue:
         specifier: ^3.5.32
         version: 3.5.33(typescript@6.0.3)
+      vue-auth:
+        specifier: 1.0.0-alpha.1
+        version: 1.0.0-alpha.1
     devDependencies:
       '@types/node':
         specifier: ^24.12.2
@@ -245,6 +248,9 @@ packages:
         optional: true
       vue:
         optional: true
+
+  Base64@1.3.0:
+    resolution: {integrity: sha512-7BjEEmnnW5pm6mBXKQ8CfQFeVjSoFnB507R86mKaJqa2i8CvosDy/dj+9RpbD0A22XQ+hGb0FHO+226C0QXRGw==}
 
   alien-signals@3.1.2:
     resolution: {integrity: sha512-d9dYqZTS90WLiU0I5c6DHj/HcKkF8ZyGN3G5x8wSbslulz70KOxaqCT0hQCo9KOyhVqzqGojvNdJXoTumZOtcw==}
@@ -491,6 +497,9 @@ packages:
   vscode-uri@3.1.0:
     resolution: {integrity: sha512-/BpdSx+yCQGnCvecbyXdxHDkuk55/G3xwnC0GqY4gmQ3j+A+g8kzzgB4Nk/SINjqn6+waqw3EgbVF2QKExkRxQ==}
 
+  vue-auth@1.0.0-alpha.1:
+    resolution: {integrity: sha512-F7Jo6ohLbE9jyIV8NEyI/wvPehj8zYRLOp0lHObjar2F/5Mo6tX6OhnVSkw2UE/TTyuX+4rq8ZXLpT4bXHt1cA==}
+
   vue-tsc@3.2.7:
     resolution: {integrity: sha512-zc1tL3HoQni1zGTGrwBVRQb7rGP5SWdu/m4rGB6JcnAC5MT5LFZIxF7Y+EJEnt4hGF23d60rXH7gRjHGb5KQQQ==}
     hasBin: true
@@ -696,6 +705,8 @@ snapshots:
       typescript: 6.0.3
       vue: 3.5.33(typescript@6.0.3)
 
+  Base64@1.3.0: {}
+
   alien-signals@3.1.2: {}
 
   autoprefixer@10.5.0(postcss@8.5.14):
@@ -868,6 +879,10 @@ snapshots:
       fsevents: 2.3.3
 
   vscode-uri@3.1.0: {}
+
+  vue-auth@1.0.0-alpha.1:
+    dependencies:
+      Base64: 1.3.0
 
   vue-tsc@3.2.7(typescript@6.0.3):
     dependencies:
