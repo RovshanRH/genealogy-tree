@@ -8,7 +8,7 @@ export const resolvers = {
         }
     },
     Mutation: {
-        createUser: async (_parent: unknown, args: { username: String, email: String, password: String, role: Number, is_blocked: Boolean }, context: any) => {
+        createUser: async (_parent: unknown, args: { username: string, email: string, password: string, role: Number, is_blocked: Boolean }, context: any) => {
             context.db.createUser(args.username, args.email, args.password, args.role, args.is_blocked);
         }
     }

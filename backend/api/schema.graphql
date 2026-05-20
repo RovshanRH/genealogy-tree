@@ -74,43 +74,52 @@ type DeathPlace {
 }
 
 enum Gender {
-  male,
+  male
   female
+}
+
+type User {
+  id: ID!
+  username: String!
+  email: String!
+  password: String!
+  role: Int!
+  is_blocked: Boolean!
 }
 
 type Person {
   id: ID!
-  
+
   # Основные данные
   surname: Surname!
   maidenSurname: MaidenSurname
   firstName: String!
   patronymic: String
   gender: Gender
-  
+
   # Дата рождения
-  birthDate: Date
+  birthDate: String
   birthDateApprox: Boolean!
   birthPlace: BirthPlace!
-  
+
   # Дата смерти
-  deathDate: Date
+  deathDate: String
   deathDateApprox: Boolean!
   deathPlace: DeathPlace
-  
+
   # Характеристики
   nationality: Nationality
   socialStatus: SocialStatus
-  
+
   # Био и источники
   bio: String
   sourceInfo: String
   isPersonContacted: Boolean!
-  
+
   # Метаданные
-  createdAt: DateTime!
-  updatedAt: DateTime!
-  
+  createdAt: String!
+  updatedAt: String!
+
   # Вычисляемые поля
   fullName: String!
   age: Int
@@ -125,14 +134,37 @@ type Relation {
   marrige_status: String!
 }
 
+type Geneology_tree_counts {
+  count_all_characters: Int
+  count_all_characters_alive: Int
+  count_all_characters_dead: Int
+  count_all_characters_kids: Int
+  count_all_characters_parents: Int
+  count_all_characters_male: Int
+  count_all_characters_female: Int
+}
+
+type Geneology_tree {
+  id: ID!
+  name: String!
+  count_characters: Geneology_tree_counts!
+  updated_at: String!
+}
+
+
 # inputs
 
+input Geneology_tree {
+  id: ID!
+  name: String!
+}
+
 input createUserInput {
-    username: String!
-    email: String!
-    password: String!
-    role: String!
-    is_blocked: Boolean!
+  username: String!
+  email: String!
+  password: String!
+  role: String!
+  is_blocked: Boolean!
 }
 
 input createPersonInput {
@@ -141,14 +173,14 @@ input createPersonInput {
   name: String!
   patronymic: String
   gender: String!
-  
-  birthDate: Date
-  birthDateApprox: Boolean!
-  birthPlace: BirthPlace!
 
-  deathDate: Date
+  birthDate: String
+  birthDateApprox: Boolean!
+  birthPlace: String!
+
+  deathDate: String
   deathDateApprox: Boolean!
-  deathPlace: DeathPlace
+  deathPlace: String
 
   nationality: String
   socialStatus: String
@@ -162,16 +194,16 @@ input createPersonInput {
 type Query {
   users: [User!]!
   user(id: ID!): User
-  
+  trees: [Geneology_tree!]!
+  tree(id: ID!): Geneology_tree
   person(id: ID!): Person
-
 }
 type Mutation {
-  createUser(
-    input: createuserInput!
-  ): User!
-  createPerson(
-    input: createPersonInput!
-  ): Person!
+  createUser(input: createUserInput!): User!
+  createPerson(input: createPersonInput!): Person!
+  updatePerson(input: createPersonInput!, id: String!): Person!
+  deletePerson(id: ID!): Boolean!
+  createGeneologyTree(input: Geneology_tree!): Geneology_tree!
+  updateGeneologyTree(input: Geneology_tree!, id: String!): Geneology_tree!
+  deleteGeneologyTree(id: ID!): Boolean!
 }
-

@@ -5,6 +5,8 @@ create type marrige_status_type as enum ('divorced', 'undivorced');
 CREATE TABLE IF NOT EXISTS person (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
     geneology_tree_id uuid REFERENCES geneology_tree (id),
+    mother_id uuid REFERENCES person (id),
+    father_id uuid REFERENCES person (id),
     surname UUID REFERENCES surname (id),
     maiden_surname UUID REFERENCES maiden_surname (id),
     first_name VARCHAR(100) NOT NULL,
@@ -38,9 +40,6 @@ create Table if not exists relations (
     father_id UUID,
     mother_id UUID,
     child_id UUID,
-    Foreign Key (father_id) REFERENCES person (id),
-    Foreign Key (mother_id) REFERENCES person (id),
-    Foreign Key (child_id) REFERENCES person (id),
     PRIMARY KEY (
         father_id,
         mother_id,
@@ -48,6 +47,48 @@ create Table if not exists relations (
     ),
     marrige_status marrige_status_type not null
 );
+
+create or replace FUNCTION add_new_relation_trigger_func()
+returns TRIGGER
+LANGUAGE plpgsql
+as $$
+
+BEGIN
+    if tg_op = 'INSERT' THEN
+        INSERT INTO relations (father_id, mother_id, child_id) VALUES
+        (
+            new.father_id,
+            new.mother_id,
+            new.id
+        );
+    end if;
+    if tg_op = 'DELETE' THEN
+        DELETE FROM relations where father_id=new.father_id and mother_id=new.mother_id and child_id = new.id;
+    end if;
+    if tf_op = 'UPDATE' THEN
+        UPDATE relations
+        SET father_id = new.father_id,
+            mother_id = new.mother_id,
+            child_id = new.id
+        WHERE father_id = old.father_id 
+        AND mother_id = old.mother_id 
+        AND child_id = old.child_id;
+    end if;
+
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    ELSE
+        RETURN NEW;
+    END IF;
+        
+END;
+$$;
+
+CREATE TRIGGER add_new_relation_trigger
+AFTER INSERT OR DELETE OR UPDATE ON person
+FOR EACH ROW
+EXECUTE FUNCTION add_new_relation_trigger_func();
+
 
 create or replace Function count_characters_trigger_func()
 returns TRIGGER
