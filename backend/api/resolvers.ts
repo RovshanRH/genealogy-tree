@@ -28,6 +28,7 @@ import type {occupationCreateWithoutPerson_person_occupationTooccupationInput} f
 import type {educationCreateWithoutPerson_person_educationToeducationInput} from "../generated/prisma/models/education.ts"
 import type {nationalityCreateWithoutPersonInput} from "../generated/prisma/models/nationality.ts"
 import type {social_statusCreateWithoutPersonInput} from "../generated/prisma/models/social_status.ts"
+import type {residenceCreateInput} from "../generated/prisma/models/residence.ts"
 
 export const resolvers = {
   Query: {
@@ -47,7 +48,7 @@ export const resolvers = {
     createPerson: async (
       _parent: unknown,
       args: {
-        input: personUncheckedCreateInput;
+        person_input: any;
         apartment_input: apartmentCreateWithoutPersonInput;
         house_input: houseCreateWithoutApartmentInput;
         street_input: streetCreateWithoutHouseInput;
@@ -59,37 +60,38 @@ export const resolvers = {
         education_input: educationCreateWithoutPerson_person_educationToeducationInput;
         nationality_input: nationalityCreateWithoutPersonInput;
         social_status_input: social_statusCreateWithoutPersonInput;
+        residence_input: residenceCreateInput;
       },
       context: { prisma: PrismaClient },
     ) => {
       try {
-        const { input } = args;
+        const { person_input } = args;
         const { prisma } = context;
         const created_at = new Date();
         const updated_at = new Date();
         const newPerson = prisma?.person.create({
           data: {
-            first_name: input.first_name,
-            patronymic: input.patronymic,
-            gender: input.gender,
-            birth_date: input.birth_date,
-            birth_date_approx: input.birth_date_approx,
-            death_date: input.death_date,
-            death_date_approx: input.death_date_approx,
-            bio: input.bio,
-            source_info: input.source_info,
-            is_person_contacted: input.is_person_contacted,
+            first_name: person_input.first_name,
+            patronymic: person_input.patronymic,
+            gender: person_input.gender,
+            birth_date: person_input.birth_date,
+            birth_date_approx: person_input.birth_date_approx,
+            death_date: person_input.death_date,
+            death_date_approx: person_input.death_date_approx,
+            bio: person_input.bio,
+            source_info: person_input.source_info,
+            is_person_contacted: person_input.is_person_contacted,
             created_at: created_at,
             updated_at: updated_at,
 
-            geneology_tree_id: input.geneology_tree_id,
-            mother_id: input.mother_id,
-            father_id: input.father_id,
+            geneology_tree_id: person_input.geneology_tree_id,
+            mother_id: person_input.mother_id,
+            father_id: person_input.father_id,
             surname: {
-                create: input.surname
+                create: person_input.surname
             },
             maiden_surname: {
-                create: input.maiden_surname
+                create: person_input.maiden_surname
             },
             occupation: {
                 create: {
@@ -120,9 +122,59 @@ export const resolvers = {
                     created_at: created_at
                 }
             },
-            
 
-            
+            residence : {
+                create: {
+                    start_date: args.residence_input.start_date,
+                    end_date: args.residence_input.end_date,
+                    start_date_approx: args.residence_input.start_date_approx,
+                    end_date_approx: args.residence_input.end_date_approx,
+                    country: {
+                        create: {
+                            name: args.country_input.name,
+                            created_at: created_at
+                        }
+                    },
+                    city: {
+                        create: {
+                            name: args.city_input.name,
+                            created_at: created_at
+                        }
+                    },
+                    street: {
+                        create: {
+                            name: args.street_input.name,
+                            created_at: created_at
+                        }
+                    },
+                    house: {
+                        create: {
+                            name: args.house_input.name,
+                            created_at: created_at
+                        }
+                    },
+                    apartment: {
+                        create: {
+                            name: args.apartment_input.name,
+                            created_at: created_at
+                        }
+                    }
+
+                }
+            },
+
+            birth_place_country_id: person_input.birth_place_country_id,
+            birth_place_city_id: person_input.birth_place_city_id,
+            birth_place_street: person_input.birth_place_street_id,
+            birth_place_house: person_input.birth_place_house_id,
+            birth_place_apartment: person_input.birth_place_apartment,
+
+            death_place_country_id: person_input.death_place_country_id,
+            death_place_city_id: person_input.death_place_city_id,
+            death_place_street: person_input.death_place_street_id,
+            death_place_house: person_input.death_place_house_id,
+            death_place_apartment: person_input.death_place_apartment
+
           },
         });
         return newPerson;
@@ -133,10 +185,10 @@ export const resolvers = {
     },
     updatePerson: async (
       _parent: unknown,
-      args: { input: personUpdateInput },
+      args: { person_input: personUpdateInput },
     ) => {
       try {
-        const { input } = args;
+        const { person_input } = args;
       } catch (error: any) {
         console.error("Error creating person:", error);
         throw new Error(`Failed to create person: ${error.message}`);
