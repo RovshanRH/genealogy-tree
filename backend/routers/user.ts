@@ -5,7 +5,7 @@ import { error } from "node:console";
 import { TRPCError } from "@trpc/server";
 import bcrypt from "bcrypt";
 // import { bc } from "bcrypt";
-import type { User } from "../generated/prisma/browser";
+import type { Users } from "../generated/prisma/browser";
 import { CompactEncrypt, SignJWT, jwtVerify } from "jose";
 
 import stringToCryptoKey from "../utils/secretEncoder.ts";
@@ -27,7 +27,7 @@ export const userRouter = router({
       const salt = await bcrypt.genSalt(saltRounds);
       const hashedPassword: string = await bcrypt.hash(input.password, salt);
 
-      const user = await prisma?.user.create({
+      const user = await prisma?.users.create({
         data: {
           id: "",
           email: input.email,
@@ -57,7 +57,7 @@ export const userRouter = router({
       }),
     )
     .query(async ({ input }) => {
-      const user = await prisma?.user.findUnique({
+      const user = await prisma?.users.findUnique({
         where: { email: input.email },
       });
       if (!user) {
@@ -92,7 +92,7 @@ export const userRouter = router({
     )
     .mutation(async ({ input }) => {
       const decoded = (await jwtVerify(input.token, secret)) as any;
-      const user = await prisma?.user.findFirst({
+      const user = await prisma?.users.findFirst({
         where: {
           id: decoded.id,
         },
