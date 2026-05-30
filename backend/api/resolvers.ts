@@ -8,6 +8,7 @@ import type {
   personCreateInput,
   personFindFirstArgs,
   personUpdateInput,
+  personUncheckedCreateInput
 } from "../generated/prisma/models/person";
 import type { apartmentCreateWithoutPersonInput } from "../generated/prisma/models/apartment.ts";
 import type { houseCreateWithoutApartmentInput } from "../generated/prisma/models/house.ts";
@@ -22,8 +23,11 @@ import { AnyNull } from "../generated/prisma/internal/prismaNamespace";
 // import { prisma } from '../lib/prisma';
 // import { Context } from '../server/context';
 import type { PrismaClient } from "@prisma/client/extension";
-// import { apartment } from '../generated/prisma/browser';
-
+// import { apartment, maiden_surname } from '../generated/prisma/browser';
+import type {occupationCreateWithoutPerson_person_occupationTooccupationInput} from "../generated/prisma/models/occupation.ts"
+import type {educationCreateWithoutPerson_person_educationToeducationInput} from "../generated/prisma/models/education.ts"
+import type {nationalityCreateWithoutPersonInput} from "../generated/prisma/models/nationality.ts"
+import type {social_statusCreateWithoutPersonInput} from "../generated/prisma/models/social_status.ts"
 
 export const resolvers = {
   Query: {
@@ -43,7 +47,7 @@ export const resolvers = {
     createPerson: async (
       _parent: unknown,
       args: {
-        input: personCreateInput;
+        input: personUncheckedCreateInput;
         apartment_input: apartmentCreateWithoutPersonInput;
         house_input: houseCreateWithoutApartmentInput;
         street_input: streetCreateWithoutHouseInput;
@@ -51,13 +55,18 @@ export const resolvers = {
         region_input: regionCreateWithoutCityInput;
         country_input: countryCreateWithoutRegionInput;
         city_where: cityCreateOrConnectWithoutRegionInput;
+        occupation_input: occupationCreateWithoutPerson_person_occupationTooccupationInput;
+        education_input: educationCreateWithoutPerson_person_educationToeducationInput;
+        nationality_input: nationalityCreateWithoutPersonInput;
+        social_status_input: social_statusCreateWithoutPersonInput;
       },
       context: { prisma: PrismaClient },
     ) => {
       try {
         const { input } = args;
         const { prisma } = context;
-
+        const created_at = new Date();
+        const updated_at = new Date();
         const newPerson = prisma?.person.create({
           data: {
             first_name: input.first_name,
@@ -70,43 +79,50 @@ export const resolvers = {
             bio: input.bio,
             source_info: input.source_info,
             is_person_contacted: input.is_person_contacted,
-            created_at: new Date(),
-            updated_at: new Date(),
-            // связанные строки
-            // apartment: {
-            //   create: {
-            //     name: args.apartment_input.name,
-            //     created_at: new Date(),
-            //     house: {
-            //       create: {
-            //         created_at: new Date(),
-            //         name: args.house_input.name,
-            //         street: {
-            //           create: {
-            //             created_at: new Date(),
-            //             name: args.street_input.name,
-            //             city: {
-            //               created_at: new Date(),
-            //               name: args.city_input.name,
-            //               region: {
-            //                 create: {
-            //                   created_at: new Date(),
-            //                   name: args.region_input.name,
-            //                   country: {
-            //                     create: {
-            //                       created_at: new Date(),
-            //                       name: args.country_input.name,
-            //                     },
-            //                   },
-            //                 },
-            //               },
-            //             },
-            //           },
-            //         },
-            //       },
-            //     },
-            //   },
-            // },
+            created_at: created_at,
+            updated_at: updated_at,
+
+            geneology_tree_id: input.geneology_tree_id,
+            mother_id: input.mother_id,
+            father_id: input.father_id,
+            surname: {
+                create: input.surname
+            },
+            maiden_surname: {
+                create: input.maiden_surname
+            },
+            occupation: {
+                create: {
+                    title: args.occupation_input.title,
+                    organization: args.occupation_input.organization,
+                    start_year: args.occupation_input.start_year,
+                    end_year: args.occupation_input.end_year
+                }
+            },
+            education: {
+                create: {
+                    institution: args.education_input.institution,
+                    degree: args.education_input.degree,
+                    start_year: args.education_input.year_start,
+                    end_year: args.education_input.year_end
+                }
+            },
+            nationality: {
+                create: {
+                    name: args.nationality_input.name,
+                    updated_at: updated_at
+                }
+            },
+            social_status: {
+                create: {
+                    name: args.social_status_input.name,
+                    description: args.social_status_input.description,
+                    created_at: created_at
+                }
+            },
+            
+
+            
           },
         });
         return newPerson;
