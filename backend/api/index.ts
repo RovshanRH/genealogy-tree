@@ -2,9 +2,12 @@ import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
 import { readFileSync } from 'fs';
 import { resolvers } from "./resolvers";
-import { db } from "./server";
+// import { db } from "./server";
+// import {PrismaClient} from '../generated/prisma/client.ts'
 
-const typeDefs = readFileSync('./schema.graphql', { encoding: 'utf-8' });
+import { prisma } from "../lib/prisma.ts";
+
+const typeDefs = readFileSync('./schema.graphql ', { encoding: 'utf-8' });
 
 const server = new ApolloServer({
   typeDefs,
@@ -14,7 +17,9 @@ const server = new ApolloServer({
 async function startServer() {
   const { url } = await startStandaloneServer(server, {
     listen: { port: 4000 },
-    context: async () => ({ db }),
+    context: async () => ({
+      prisma,
+    }),
   });
 
   console.log(`GraphQL Server ready at: ${url}`);
