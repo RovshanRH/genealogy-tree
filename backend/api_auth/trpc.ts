@@ -35,7 +35,7 @@ async function getUserFromToken(token?: string) {
     // Верифицируем JWT токен
     const decoded = jwtVerify(token, secret) as any;
     
-    const user = await prisma?.user.findUnique({
+    const user = await prisma?.users.findUnique({
       where: { id: decoded.userId },
       select: {
         id: true,
