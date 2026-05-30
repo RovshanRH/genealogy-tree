@@ -78,15 +78,6 @@ enum Gender {
   female
 }
 
-# type User {
-#   id: ID!
-#   username: String!
-#   email: String!
-#   password: String!
-#   role: Int!
-#   is_blocked: Boolean!
-# }
-
 type Person {
   id: ID!
 
@@ -159,14 +150,6 @@ input Geneology_tree {
   name: String!
 }
 
-# input createUserInput {
-#   username: String!
-#   email: String!
-#   password: String!
-#   role: String!
-#   is_blocked: Boolean!
-# }
-
 input createPersonInput {
   surname: ID!
   maiden_surname: ID
@@ -192,15 +175,14 @@ input createPersonInput {
 
 # query и mutations
 type Query {
-  # users: [User!]!
-  # user(id: ID!): User
+
   trees: [Geneology_tree!]!
   tree(id: ID!): Geneology_tree
+  persons: [Person!]!
   person(id: ID!): Person
 }
 type Mutation {
-  # createUser(input: createUserInput!): User!
-  # createPerson(input: createPersonInput!): Person!
+  createPerson(input: createPersonInput!): Person!
   updatePerson(input: createPersonInput!, id: String!): Person!
   deletePerson(id: ID!): Boolean!
   createGeneologyTree(input: Geneology_tree!): Geneology_tree!
