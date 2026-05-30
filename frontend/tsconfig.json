@@ -3,5 +3,13 @@
   "references": [
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }
-  ]
+  ],
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "jsx": "vue",
+    "moduleResolution": "bundler",
+    "outDir": "../dist/frontend",
+    "strict": true
+  }
 }
