@@ -8,7 +8,7 @@ import type {
   personCreateInput,
   personFindFirstArgs,
   personUpdateInput,
-  personUncheckedCreateInput
+  personUncheckedCreateInput,
 } from "../generated/prisma/models/person";
 import type { apartmentCreateWithoutPersonInput } from "../generated/prisma/models/apartment.ts";
 import type { houseCreateWithoutApartmentInput } from "../generated/prisma/models/house.ts";
@@ -24,11 +24,11 @@ import { AnyNull } from "../generated/prisma/internal/prismaNamespace";
 // import { Context } from '../server/context';
 import type { PrismaClient } from "@prisma/client/extension";
 // import { apartment, maiden_surname } from '../generated/prisma/browser';
-import type {occupationCreateWithoutPerson_person_occupationTooccupationInput} from "../generated/prisma/models/occupation.ts"
-import type {educationCreateWithoutPerson_person_educationToeducationInput} from "../generated/prisma/models/education.ts"
-import type {nationalityCreateWithoutPersonInput} from "../generated/prisma/models/nationality.ts"
-import type {social_statusCreateWithoutPersonInput} from "../generated/prisma/models/social_status.ts"
-import type {residenceCreateInput} from "../generated/prisma/models/residence.ts"
+import type { occupationCreateWithoutPerson_person_occupationTooccupationInput } from "../generated/prisma/models/occupation.ts";
+import type { educationCreateWithoutPerson_person_educationToeducationInput } from "../generated/prisma/models/education.ts";
+import type { nationalityCreateWithoutPersonInput } from "../generated/prisma/models/nationality.ts";
+import type { social_statusCreateWithoutPersonInput } from "../generated/prisma/models/social_status.ts";
+import type { residenceCreateInput } from "../generated/prisma/models/residence.ts";
 
 export const resolvers = {
   Query: {
@@ -43,8 +43,8 @@ export const resolvers = {
         where: { id: args.id },
       }),
   },
-  // resolvers.ts
   Mutation: {
+    // CRUD персонажей
     createPerson: async (
       _parent: unknown,
       args: {
@@ -88,79 +88,78 @@ export const resolvers = {
             mother_id: person_input.mother_id,
             father_id: person_input.father_id,
             surname: {
-                create: person_input.surname
+              create: person_input.surname,
             },
             maiden_surname: {
-                create: person_input.maiden_surname
+              create: person_input.maiden_surname,
             },
             occupation: {
-                create: {
-                    title: args.occupation_input.title,
-                    organization: args.occupation_input.organization,
-                    start_year: args.occupation_input.start_year,
-                    end_year: args.occupation_input.end_year
-                }
+              create: {
+                title: args.occupation_input.title,
+                organization: args.occupation_input.organization,
+                start_year: args.occupation_input.start_year,
+                end_year: args.occupation_input.end_year,
+              },
             },
             education: {
-                create: {
-                    institution: args.education_input.institution,
-                    degree: args.education_input.degree,
-                    start_year: args.education_input.year_start,
-                    end_year: args.education_input.year_end
-                }
+              create: {
+                institution: args.education_input.institution,
+                degree: args.education_input.degree,
+                start_year: args.education_input.year_start,
+                end_year: args.education_input.year_end,
+              },
             },
             nationality: {
-                create: {
-                    name: args.nationality_input.name,
-                    updated_at: updated_at
-                }
+              create: {
+                name: args.nationality_input.name,
+                updated_at: updated_at,
+              },
             },
             social_status: {
-                create: {
-                    name: args.social_status_input.name,
-                    description: args.social_status_input.description,
-                    created_at: created_at
-                }
+              create: {
+                name: args.social_status_input.name,
+                description: args.social_status_input.description,
+                created_at: created_at,
+              },
             },
 
-            residence : {
-                create: {
-                    start_date: args.residence_input.start_date,
-                    end_date: args.residence_input.end_date,
-                    start_date_approx: args.residence_input.start_date_approx,
-                    end_date_approx: args.residence_input.end_date_approx,
-                    country: {
-                        create: {
-                            name: args.country_input.name,
-                            created_at: created_at
-                        }
-                    },
-                    city: {
-                        create: {
-                            name: args.city_input.name,
-                            created_at: created_at
-                        }
-                    },
-                    street: {
-                        create: {
-                            name: args.street_input.name,
-                            created_at: created_at
-                        }
-                    },
-                    house: {
-                        create: {
-                            name: args.house_input.name,
-                            created_at: created_at
-                        }
-                    },
-                    apartment: {
-                        create: {
-                            name: args.apartment_input.name,
-                            created_at: created_at
-                        }
-                    }
-
-                }
+            residence: {
+              create: {
+                start_date: args.residence_input.start_date,
+                end_date: args.residence_input.end_date,
+                start_date_approx: args.residence_input.start_date_approx,
+                end_date_approx: args.residence_input.end_date_approx,
+                country: {
+                  create: {
+                    name: args.country_input.name,
+                    created_at: created_at,
+                  },
+                },
+                city: {
+                  create: {
+                    name: args.city_input.name,
+                    created_at: created_at,
+                  },
+                },
+                street: {
+                  create: {
+                    name: args.street_input.name,
+                    created_at: created_at,
+                  },
+                },
+                house: {
+                  create: {
+                    name: args.house_input.name,
+                    created_at: created_at,
+                  },
+                },
+                apartment: {
+                  create: {
+                    name: args.apartment_input.name,
+                    created_at: created_at,
+                  },
+                },
+              },
             },
 
             birth_place_country_id: person_input.birth_place_country_id,
@@ -173,8 +172,7 @@ export const resolvers = {
             death_place_city_id: person_input.death_place_city_id,
             death_place_street: person_input.death_place_street_id,
             death_place_house: person_input.death_place_house_id,
-            death_place_apartment: person_input.death_place_apartment
-
+            death_place_apartment: person_input.death_place_apartment,
           },
         });
         return newPerson;
@@ -186,13 +184,45 @@ export const resolvers = {
     updatePerson: async (
       _parent: unknown,
       args: { person_input: personUpdateInput },
+      context: { prisma: PrismaClient },
     ) => {
       try {
         const { person_input } = args;
+        const { prisma } = context;
+        const updated_at = new Date();
+        const selectedPerson = await prisma.person.findUnique({
+          where: { id: person_input.id },
+        });
+        if (!selectedPerson) {
+          throw new Error("Person not found");
+        }
+
+        const updatedPerson = prisma.person.update({
+          where: { id: selectedPerson.id },
+          data: {
+            ...person_input,
+            updated_at,
+          },
+        });
+
+        return updatedPerson;
       } catch (error: any) {
-        console.error("Error creating person:", error);
-        throw new Error(`Failed to create person: ${error.message}`);
+        console.error("Error updating person:", error);
+        throw new Error(`Failed to update person: ${error.message}`);
       }
     },
+    deletePerson: async (
+      _parent: unknown,
+      args: { id: string },
+      context: { prisma: PrismaClient },
+    ) => {
+      const { prisma } = context;
+      const deletedPerson = await prisma.person.delete({
+        where: { id: args.id },
+      });
+      return deletedPerson;
+    },
+    // CRUD деревьев
+    
   },
 };
