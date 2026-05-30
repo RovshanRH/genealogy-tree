@@ -1,5 +1,13 @@
 /* Replace with your SQL commands */
-drop table if not exists surname;
-drop table if exists maiden_surname;
-drop index if not exists idx_person_surname;
-drop index if not exists idx_person_maiden_surname;
+CREATE TABLE if not exists surname (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS maiden_surname (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(100)
+)
+
+CREATE INDEX if NOT exists idx_person_surname ON surname (name);
+CREATE INDEX if NOT exists idx_person_maiden_surname ON maiden_surname (name);
