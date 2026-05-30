@@ -1,5 +1,38 @@
 {
-	"dependencies": {
-		"typescript": "^6.0.3"
-	}
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/node": "^25.9.1",
+    "@types/pg": "^8.20.0",
+    "prisma": "^7.8.0",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3"
+  },
+  "scripts": {
+    "dev:frontend": "cd frontend && vite",
+    "dev:backend": "cd backend && nodemon --exec ts-node src/index.ts",
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd frontend && tsc",
+    "build:backend": "cd backend && tsc"
+  },
+  "dependencies": {
+    "@fastify/websocket": "^11.2.0",
+    "@prisma/client": "^7.8.0",
+    "@trpc/client": "^11.17.0",
+    "@trpc/server": "^11.17.0",
+    "@upstash/ratelimit": "^2.0.8",
+    "bcrypt": "^6.0.0",
+    "concurrently": "^9.2.1",
+    "dotenv": "^17.4.2",
+    "fastify": "^5.8.5",
+    "jose": "^6.2.3",
+    "jwt": "^0.2.0",
+    "pg": "^8.21.0",
+    "redis": "^5.12.1",
+    "sqlalchemy": "^10.1.1",
+    "superjson": "^2.2.6",
+    "ts-node": "^10.9.2",
+    "zod": "^4.4.3"
+  },
+  "type": "module"
 }
