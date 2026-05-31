@@ -9,6 +9,7 @@ import type {
   personFindFirstArgs,
   personUpdateInput,
   personUncheckedCreateInput,
+  personCreateManyGeneology_treeInputEnvelope,
 } from "../generated/prisma/models/person";
 import type { apartmentCreateWithoutPersonInput } from "../generated/prisma/models/apartment.ts";
 import type { houseCreateWithoutApartmentInput } from "../generated/prisma/models/house.ts";
@@ -23,13 +24,14 @@ import { AnyNull } from "../generated/prisma/internal/prismaNamespace";
 // import { prisma } from '../lib/prisma';
 // import { Context } from '../server/context';
 import type { PrismaClient } from "@prisma/client/extension";
-// import { apartment, maiden_surname } from '../generated/prisma/browser';
+// import { apartment, maiden_surname, geneology_tree } from '../generated/prisma/browser';
 import type { occupationCreateWithoutPerson_person_occupationTooccupationInput } from "../generated/prisma/models/occupation.ts";
 import type { educationCreateWithoutPerson_person_educationToeducationInput } from "../generated/prisma/models/education.ts";
 import type { nationalityCreateWithoutPersonInput } from "../generated/prisma/models/nationality.ts";
 import type { social_statusCreateWithoutPersonInput } from "../generated/prisma/models/social_status.ts";
 import type { residenceCreateInput } from "../generated/prisma/models/residence.ts";
-
+import type {geneology_treeCreateInput, geneology_treeUpdateInput} from "../generated/prisma/models/geneology_tree.ts"
+import { create } from 'domain';
 export const resolvers = {
   Query: {
     trees: async () => await prisma?.geneology_tree.findMany(),
@@ -223,6 +225,42 @@ export const resolvers = {
       return deletedPerson;
     },
     // CRUD деревьев
-    
+    createTree: async (_parent: unknown, args: {tree_input: geneology_treeCreateInput}, context: { prisma: PrismaClient }) => {
+        const { prisma } = context;
+        const {tree_input} = args;
+        const created_at = new Date();
+        const updated_at = new Date();
+        const newTree = await prisma.geneology_tree.create({
+            name: tree_input.name,
+            updated_at: updated_at,
+            person: []
+        });
+        return newTree;
+    },
+    updateTree: async (_parent: unknown, args: {tree_input: geneology_treeUpdateInput}, context: { prisma: PrismaClient }) => {
+        const { prisma } = context;
+        const {tree_input} = args;
+        const updated_at = new Date();
+        const updatedTree = await prisma.geneology_tree.update({
+            where: {id: tree_input.id},
+            data: {
+                ...tree_input,
+                updated_at
+            }
+            
+        });
+        return updatedTree;
+    },
+    deleteTree: async (
+      _parent: unknown,
+      args: { id: string },
+      context: { prisma: PrismaClient },
+    ) => {
+      const { prisma } = context;
+      const deletedTree = await prisma.geneology_tree.delete({
+        where: { id: args.id },
+      });
+      return deletedTree;
+    },
   },
 };
