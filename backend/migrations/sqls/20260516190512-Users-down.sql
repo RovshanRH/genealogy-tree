@@ -5,4 +5,4 @@ drop table if exists Users;
 drop table if exists Roles;
 
 drop index if exists idx_users_email;
-drop table if EXISTS idx_users_username;
+drop index if EXISTS idx_users_username;

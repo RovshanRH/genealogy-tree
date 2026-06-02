@@ -13,5 +13,7 @@ CREATE TABLE IF NOT EXISTS residence (
     start_date          DATE,
     end_date            DATE,
     start_date_approx   BOOLEAN DEFAULT false,
-    end_date_approx     BOOLEAN DEFAULT false
+    end_date_approx     BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

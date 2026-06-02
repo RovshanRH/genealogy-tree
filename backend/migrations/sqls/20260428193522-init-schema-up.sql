@@ -48,6 +48,8 @@ create Table if not exists relations (
         mother_id,
         child_id
     ),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     marrige_status marrige_status_type not null
 );
 

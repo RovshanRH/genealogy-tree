@@ -4,5 +4,7 @@ CREATE TABLE IF NOT EXISTS occupation (
     title           VARCHAR(150) NOT NULL,
     organization    VARCHAR(200),
     start_year      INTEGER,
-    end_year        INTEGER
+    end_year        INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

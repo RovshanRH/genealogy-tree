@@ -13,6 +13,7 @@ CREATE table if not exists geneology_tree (
     count_all_characters_female INTEGER DEFAULT 0,
     -- count_all_characters_grandparents INTEGER DEFAULT 0,
 
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
 
