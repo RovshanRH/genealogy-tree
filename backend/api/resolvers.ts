@@ -1,3 +1,7 @@
+
+// TODO: рефакторинг мутаций. Добавить валидацию. Рефакторинг БД: везде по create_at и uodate_at. Поменять связи (место жительства и персонаж)
+
+
 import { id } from "zod/locales";
 import { prisma } from "../lib/prisma.ts";
 import { z } from "zod";
