@@ -3,10 +3,10 @@ import dotenv from 'dotenv';
 dotenv.config({path: '../.env'})
 
 export const dbConfig= {
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    host: process.env.DB_HOST,
-    database_name: process.env.DB_NAME,
-    port: Number(process.env.DB_PORT),
-    database_url: process.env.DATABASE_URL
+    DB_USER: process.env.DB_USER,
+    DB_PASSWORD: process.env.DB_PASSWORD,
+    DB_HOST: process.env.DB_HOST,
+    DB_NAME: process.env.DB_NAME,
+    DB_PORT: Number(process.env.DB_PORT),
+    DATABASE_URL: process.env.DATABASE_URL
 }
