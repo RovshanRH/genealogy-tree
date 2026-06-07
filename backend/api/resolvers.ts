@@ -37,6 +37,7 @@ import type {
 import { create } from "domain";
 import { error } from "node:console";
 // import { geneology_tree } from '../generated/prisma/models/geneology_tree';
+
 export const resolvers = {
   Query: {
     trees: async () => {
@@ -251,14 +252,16 @@ export const resolvers = {
     // CRUD деревьев
     createTree: async (
       _parent: unknown,
-      args: { tree_input: geneology_treeCreateInput },
-      context: { prisma: PrismaClient },
+      args: { input: geneology_treeCreateInput },
+      // context: { prisma: PrismaClient }
     ) => {
       try {
-        const { prisma } = context;
-        const { tree_input } = args;
-        const newTree = await prisma?.geneology_tree.create({
-          name: tree_input.name,
+        // const { prisma } = context;
+        const { input } = args;
+        const newTree = await prisma.geneology_tree.create({
+          data: {
+            name: input.name
+          }
         });
         return newTree;
       } catch (error: any) {

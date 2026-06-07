@@ -148,7 +148,6 @@ type Geneology_tree {
 # inputs
 
 input GeneologyTreeInput {
-  id: ID!
   name: String!
 }
 
@@ -187,7 +186,7 @@ type Mutation {
   createPerson(input: createPersonInput!): Person!
   updatePerson(input: createPersonInput!, id: String!): Person!
   deletePerson(id: ID!): Boolean!
-  createTree(input: GeneologyTreeInput!): Geneology_tree
+  createTree(input: GeneologyTreeInput): Geneology_tree
   updateTree(input: GeneologyTreeInput!, id: String!): Geneology_tree!
   deleteTree(id: ID!): Boolean!
 }
