@@ -1,3 +1,5 @@
+
+
 type Surname {
   id: ID!
   value: String!
@@ -145,7 +147,7 @@ type Geneology_tree {
 
 # inputs
 
-input Geneology_tree {
+input GeneologyTreeInput {
   id: ID!
   name: String!
 }
@@ -176,16 +178,16 @@ input createPersonInput {
 # query и mutations
 type Query {
 
-  trees: [Geneology_tree!]!
+  trees: [Geneology_tree!]
   tree(id: ID!): Geneology_tree
-  persons: [Person!]!
+  persons: [Person!]
   person(id: ID!): Person
 }
 type Mutation {
   createPerson(input: createPersonInput!): Person!
   updatePerson(input: createPersonInput!, id: String!): Person!
   deletePerson(id: ID!): Boolean!
-  createGeneologyTree(input: Geneology_tree!): Geneology_tree!
-  updateGeneologyTree(input: Geneology_tree!, id: String!): Geneology_tree!
-  deleteGeneologyTree(id: ID!): Boolean!
+  createTree(input: GeneologyTreeInput!): Geneology_tree
+  updateTree(input: GeneologyTreeInput!, id: String!): Geneology_tree!
+  deleteTree(id: ID!): Boolean!
 }

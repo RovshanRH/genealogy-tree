@@ -15,5 +15,7 @@
 	"graphql": {
   "schema": "https://localhost:3001/graphql",
   "documents": "**/*.{graphql,js,ts,jsx,tsx}"
-}
+  
+},
+"type": "module"
 }
