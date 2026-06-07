@@ -1,6 +1,6 @@
 /* Replace with your SQL commands */
 CREATE table if not exists geneology_tree (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name varchar(300) not null,
 
 

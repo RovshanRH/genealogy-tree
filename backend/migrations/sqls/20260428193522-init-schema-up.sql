@@ -3,8 +3,10 @@ CREATE TYPE gender_status as enum ('male', 'female');
 create type marrige_status_type as enum ('divorced', 'undivorced');
 
 CREATE TABLE IF NOT EXISTS person (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-    geneology_tree_id uuid REFERENCES geneology_tree (id),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    genealogy_tree_id uuid,
+    -- geneology_tree_id uuid REFERENCES geneology_tree (id),
+    foreign key (genealogy_tree_id) REFERENCES geneology_tree(id) on delete cascade,
     mother_id uuid REFERENCES person (id),
     father_id uuid REFERENCES person (id),
     surname UUID REFERENCES surname (id),
