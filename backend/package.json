@@ -5,6 +5,7 @@
 		"dotenv": "^17.4.2",
 		"graphql": "^16.14.0",
 		"nanoid": "^5.1.11",
+		"nodemon": "^3.1.14",
 		"pg": "^8.20.0"
 	},
 	"devDependencies": {
@@ -13,9 +14,8 @@
 		"apollo-server": "^3.13.0"
 	},
 	"graphql": {
-  "schema": "https://localhost:3001/graphql",
-  "documents": "**/*.{graphql,js,ts,jsx,tsx}"
-  
-},
-"type": "module"
+		"schema": "https://localhost:3001/graphql",
+		"documents": "**/*.{graphql,js,ts,jsx,tsx}"
+	},
+	"type": "module"
 }

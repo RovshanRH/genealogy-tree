@@ -271,24 +271,24 @@ export const resolvers = {
     },
     updateTree: async (
       _parent: unknown,
-      args: { tree_input: geneology_treeUpdateInput },
+      args: { input: geneology_treeUpdateInput, id: string },
       context: { prisma: PrismaClient },
     ) => {
       try {
         const { prisma } = context;
-        const { tree_input } = args;
+        // const { input } = args;
         const updated_at = new Date();
         const updatedTree = await prisma.geneology_tree.update({
-          where: { id: tree_input.id },
+          where: { id: args.id },
           data: {
-            ...tree_input,
+            ...args.input,
             updated_at,
           },
         });
         return updatedTree;
       } catch (error: any) {
         console.error("Error updating Tree:", error);
-        throw new Error(`Failed to delete Tree: ${error.message}`);
+        throw new Error(`Failed to update Tree: ${error.message}`);
       }
     },
     deleteTree: async (
@@ -301,7 +301,7 @@ export const resolvers = {
         const deletedTree = await prisma.geneology_tree.delete({
           where: { id: args.id },
         });
-        return deletedTree;
+        return deletedTree !== null;
       } catch (error: any) {
         console.error("Error deleting Tree", error);
         throw new Error(`Failed to delete Tree: ${error.message}`);

@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 import superjson from 'superjson'
 
 
-dotenv.config({path: '../.env'})
+// dotenv.config({path: '../../.env'})
 
 console.log(process.env.JWT_SECRET);
 const secret: CryptoKey = await stringToCryptoKey(process.env.JWT_SECRET!);

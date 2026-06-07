@@ -1,4 +1,5 @@
 allowBuilds:
+  '@apollo/protobufjs': false
   '@prisma/engines': false
   bcrypt: false
   esbuild: true

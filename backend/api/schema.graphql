@@ -127,7 +127,9 @@ type Relation {
   marrige_status: String!
 }
 
-type Geneology_tree_counts {
+type Geneology_tree {
+  id: ID!
+  name: String!
   count_all_characters: Int
   count_all_characters_alive: Int
   count_all_characters_dead: Int
@@ -135,12 +137,6 @@ type Geneology_tree_counts {
   count_all_characters_parents: Int
   count_all_characters_male: Int
   count_all_characters_female: Int
-}
-
-type Geneology_tree {
-  id: ID!
-  name: String!
-  count_characters: Geneology_tree_counts!
   updated_at: String!
 }
 
