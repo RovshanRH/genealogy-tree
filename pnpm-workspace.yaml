@@ -1,6 +1,10 @@
 allowBuilds:
+  '@apollo/protobufjs': false
   '@prisma/engines': false
   bcrypt: false
+  core-js: false
+  core-js-pure: false
   esbuild: true
   node-base64: false
   prisma: false
+  yarn: false
