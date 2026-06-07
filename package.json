@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev:frontend": "cd frontend && vite",
-    "dev:backend": "cd backend && nodemon --exec ts-node src/index.ts",
+    "dev:backend": "cd backend && nodemon --exec ts-node api/index.ts",
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "build": "npm run build:frontend && npm run build:backend",
     "build:frontend": "cd frontend && tsc",
@@ -27,6 +27,7 @@
     "fastify": "^5.8.5",
     "jose": "^6.2.3",
     "jwt": "^0.2.0",
+    "nodemon": "^3.1.14",
     "pg": "^8.21.0",
     "redis": "^5.12.1",
     "sqlalchemy": "^10.1.1",
