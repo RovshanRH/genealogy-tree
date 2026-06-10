@@ -3,15 +3,37 @@
 type Surname {
   id: ID!
   value: String!
+
+  createdAt: String!
+  updatedAt: String!
+}
+
+input SurnameInput {
+  value: String!
 }
 
 type MaidenSurname {
   id: ID!
   value: String!
+
+  createdAt: String!
+  updatedAt: String!
+}
+
+input MaidenSurnameInput {
+  value: String!
+
 }
 
 type Country {
   id: ID!
+  name: String!
+
+  createdAt: String!
+  updatedAt: String!
+}
+
+input CountryInput {
   name: String!
 }
 
@@ -19,23 +41,55 @@ type Region {
   id: ID!
   name: String!
   country: Country!
+
+  createdAt: String!
+  updatedAt: String!
+}
+
+input RegionInput {
+  name: String!
+  country: CountryInput!
 }
 
 type City {
   id: ID!
   name: String!
   region: Region!
+
+  createdAt: String!
+  updatedAt: String!
+}
+
+input CityInput {
+  name: String!
+  region: RegionInput!
 }
 
 type Street {
   id: ID!
   name: String!
   city: City!
+
+  createdAt: String!
+  updatedAt: String!
+}
+
+input StreetInput {
+  name: String!
+  city: CityInput!
 }
 
 type House {
   id: ID!
   street: Street!
+  name: String!
+
+  createdAt: String!
+  updatedAt: String!
+}
+
+input HouseInput {
+  street: StreetInput!
   name: String!
 }
 
@@ -43,17 +97,82 @@ type Apartment {
   id: ID!
   house: House!
   name: String!
+
+  createdAt: String!
+  updatedAt: String!
+}
+
+input ApartmentInput {
+  house: HouseInput!
+  name: String!
 }
 
 type Nationality {
   id: ID!
   name: String!
+
+  createdAt: String!
+  updatedAt: String!
+}
+
+input NationalityInput {
+
+  name: String!
+
 }
 
 type SocialStatus {
   id: ID!
   name: String!
   description: String
+
+  createdAt: String!
+  updatedAt: String!
+}
+
+input SocialStatusInput {
+
+  name: String!
+  description: String
+
+}
+
+type Occupation {
+  id: ID!
+  title: String!
+  organization: String
+  startYear: String
+  endYear: String
+
+  createdAt: String!
+  updatedAt: String!
+}
+
+input OccupationInput {
+
+  title: String!
+  organization: String
+  startYear: String
+  endYear: String
+
+}
+
+type Education {
+  id: ID!
+  institution: String
+  specialty: String
+  yearStart: String
+  yearEnd: String
+
+  created_at: String
+  updated_at: STring
+}
+
+input EducationInput {
+  institution: String
+  specialty: String
+  yearStart: String
+  yearEnd: String
 }
 
 # ========== АДРЕСНЫЕ ТИПЫ (ДЛЯ УДОБСТВА КЛИЕНТА) ==========
@@ -66,6 +185,21 @@ type BirthPlace {
   house: House
   apartment: Apartment
   fullAddress: String
+  
+  birthDate: String
+  birthDateApprox: Boolean!
+}
+
+input BirthPlaceInput {
+  country: CountryInput
+  region: RegionInput
+  city: CityInput
+  street: StreetInput
+  house: HouseInput
+  apartment: ApartmentInput
+
+  birthDate: String
+  birthDateApprox: Boolean!
 }
 
 type DeathPlace {
@@ -73,6 +207,18 @@ type DeathPlace {
   region: Region
   city: City
   fullAddress: String
+
+  deathDate: String
+  deathDateApprox: Boolean!
+}
+
+input DeathPlaceInput {
+  country: CountryInput
+  region: RegionInput
+  city: CityInput
+  
+  deathDate: String
+  deathDateApprox: Boolean!
 }
 
 enum Gender {
@@ -82,6 +228,7 @@ enum Gender {
 
 type Person {
   id: ID!
+  genealogyTreeId: ID!
 
   # Основные данные
   surname: Surname!
@@ -90,14 +237,8 @@ type Person {
   patronymic: String
   gender: Gender
 
-  # Дата рождения
-  birthDate: String
-  birthDateApprox: Boolean!
   birthPlace: BirthPlace!
 
-  # Дата смерти
-  deathDate: String
-  deathDateApprox: Boolean!
   deathPlace: DeathPlace
 
   # Характеристики
@@ -137,52 +278,75 @@ type Geneology_tree {
   count_all_characters_parents: Int
   count_all_characters_male: Int
   count_all_characters_female: Int
+  created_at: String!
   updated_at: String!
 }
-
-
-# inputs
 
 input GeneologyTreeInput {
   name: String!
 }
 
-input createPersonInput {
-  surname: ID!
-  maiden_surname: ID
-  name: String!
+# поменять схему инпута, нужно связать с остальными типами
+input CreatePersonInput {
+  id: ID!
+
+  surname: SurnameInput!
+  maidenSurname: MaidenSurnameInput
+  firstName: String!
   patronymic: String
-  gender: String!
+  gender: Gender
+  
+  birthPlace: BirthPlaceInput!
+  
+  deathPlace: DeathPlaceInput
 
-  birthDate: String
-  birthDateApprox: Boolean!
-  birthPlace: String!
+  # Характеристики
+  nationality: NationalityInput
+  socialStatus: SocialStatusInput
+  occupation: OccupationInput
+  education: EducationInput
 
-  deathDate: String
-  deathDateApprox: Boolean!
-  deathPlace: String
-
-  nationality: String
-  socialStatus: String
-
+  # Био и источники
   bio: String
   sourceInfo: String
   isPersonContacted: Boolean!
 }
 
+input UpdatePersonInput {
+  surname: SurnameInput
+  maidenSurname: MaidenSurnameInput
+  firstName: String
+  patronymic: String
+  gender: Gender
+
+  birthPlace: BirthPlaceInput
+
+  deathPlace: DeathPlaceInput
+
+  nationality: NationalityInput
+  socialStatus: SocialStatusInput
+  occupation: OccupationInput
+  education: EducationInput
+
+  bio: String
+  sourceInfo: String
+  isPersonContacted: Boolean
+}
+
 # query и mutations
 type Query {
 
-  trees: [Geneology_tree!]
-  tree(id: ID!): Geneology_tree
+  trees: [GenealogyTree!]
+  tree(id: ID!): GenealogyTree
   persons: [Person!]
   person(id: ID!): Person
 }
 type Mutation {
-  createPerson(input: createPersonInput!): Person!
-  updatePerson(input: createPersonInput!, id: String!): Person!
+  createPerson(input: CreatePersonInput!): Person!
+  updatePerson(id: ID!, input: UpdatePersonInput!): Person!
   deletePerson(id: ID!): Boolean!
-  createTree(input: GeneologyTreeInput): Geneology_tree
-  updateTree(input: GeneologyTreeInput!, id: String!): Geneology_tree!
+
+  createTree(input: GenealogyTreeInput!): GenealogyTree!
+  updateTree(id: ID!, input: GenealogyTreeInput!): GenealogyTree!
   deleteTree(id: ID!): Boolean!
 }
