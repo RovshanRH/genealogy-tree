@@ -17,28 +17,16 @@ CREATE TABLE IF NOT EXISTS person (
     occupation uuid REFERENCES occupation (id),
     education uuid REFERENCES education (id),
     residence uuid REFERENCES residence (id),
-    birth_date DATE,
-    birth_date_approx BOOLEAN DEFAULT false,
-    birth_place_country_id UUID REFERENCES country (id),
-    birth_place_city_id UUID REFERENCES city (id),
-    birth_place_street UUID REFERENCES street (id),
-    birth_place_house UUID REFERENCES house (id),
-    birth_place_apartment UUID REFERENCES apartment (id),
-    death_date DATE,
-    death_date_approx BOOLEAN DEFAULT false,
-    death_place_country_id UUID REFERENCES country (id),
-    death_place_city_id UUID REFERENCES city (id),
-    nationality_id UUID REFERENCES nationality (id),
-    social_status_id UUID REFERENCES social_status (id),
+    -- birthplace
+    birth_place uuid REFERENCES birth_place (id),
+    -- death_place
+    death_place uuid REFERENCES death_place (id),
     bio TEXT,
     source_info TEXT,
     is_person_contacted BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT birth_before_death CHECK (
-        death_date IS NULL
-        OR death_date >= birth_date
-    )
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    
 );
 
 create Table if not exists relations (

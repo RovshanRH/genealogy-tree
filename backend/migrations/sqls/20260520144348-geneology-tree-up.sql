@@ -20,5 +20,17 @@ CREATE table if not exists geneology_tree (
 -- Индексы
 create index if not exists idx_geneology_tree on geneology_tree (name);
 -- Функции
+create or REPLACE function auto_updated_at_trigger_func()
+returns TRIGGER
+LANGUAGE plpgsql
+as $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    return NEW;
+END;
+$$;
 
-
+create trigger auto_updated_at_trigger
+before update on geneology_tree
+for each row
+EXECUTE FUNCTION auto_updated_at_trigger_func();

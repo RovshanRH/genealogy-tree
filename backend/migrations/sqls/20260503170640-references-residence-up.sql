@@ -6,9 +6,9 @@ CREATE TABLE IF NOT EXISTS residence (
     
     country_id          UUID REFERENCES country(id),
     city_id             UUID REFERENCES city(id),
-    street              uuid REFERENCES street(id),
-    house               uuid REFERENCES house(id),
-    apartment           uuid REFERENCES apartment(id),
+    street_id              uuid REFERENCES street(id),
+    house_id               uuid REFERENCES house(id),
+    apartment_id           uuid REFERENCES apartment(id),
     
     start_date          DATE,
     end_date            DATE,
