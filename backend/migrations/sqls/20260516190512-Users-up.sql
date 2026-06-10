@@ -17,3 +17,18 @@ CREATE table if not exists "Users" (
 
 CREATE INDEX idx_users_email ON "Users"(email);
 CREATE INDEX idx_users_username ON "Users"(username);
+
+create or REPLACE function auto_updated_at_trigger_func()
+returns TRIGGER
+LANGUAGE plpgsql
+as $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    return NEW;
+END;
+$$;
+
+create trigger auto_updated_at_trigger
+before update on Users
+for each row
+EXECUTE FUNCTION auto_updated_at_trigger_func();

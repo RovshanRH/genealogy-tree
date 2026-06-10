@@ -1,2 +1,2 @@
 /* Replace with your SQL commands */
-drop if exists death_place
+drop table if exists death_place

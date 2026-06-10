@@ -1,47 +1,75 @@
 CREATE TYPE gender_status as enum ('male', 'female');
 
-create type marrige_status_type as enum ('divorced', 'undivorced');
+create type marrige_status_type as enum ('divorced', 'single', 'widowed', 'married');
 
 CREATE TABLE IF NOT EXISTS person (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     genealogy_tree_id uuid,
-    -- geneology_tree_id uuid REFERENCES geneology_tree (id),
     foreign key (genealogy_tree_id) REFERENCES geneology_tree(id) on delete cascade,
-    mother_id uuid REFERENCES person (id),
-    father_id uuid REFERENCES person (id),
+    mother uuid REFERENCES person (id),
+    father uuid REFERENCES person (id),
+    marrige_status marrige_status_type not null,
+    spouse uuid REFERENCES person (id),
     surname UUID REFERENCES surname (id),
-    maiden_surname UUID REFERENCES maiden_surname (id),
-    first_name VARCHAR(100) NOT NULL,
+    maidenSurname UUID REFERENCES maiden_surname (id),
+    firstName VARCHAR(100) NOT NULL,
     patronymic VARCHAR(100),
+    fullName VARCHAR(300),
+    age INT not NULL,
     gender gender_status not NULL,
     occupation uuid REFERENCES occupation (id),
     education uuid REFERENCES education (id),
     residence uuid REFERENCES residence (id),
+    nationality UUID REFERENCES nationality (id),
+    socialStatus UUID REFERENCES social_status (id),
     -- birthplace
     birth_place uuid REFERENCES birth_place (id),
     -- death_place
     death_place uuid REFERENCES death_place (id),
     bio TEXT,
     source_info TEXT,
-    is_person_contacted BOOLEAN DEFAULT false,
+    isPersonContacted BOOLEAN DEFAULT false,
+    isAlive BOOLEAN
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     
 );
 
 create Table if not exists relations (
-    father_id UUID,
-    mother_id UUID,
-    child_id UUID,
-    PRIMARY KEY (
+    id uuid PRIMARY KEY (
         father_id,
         mother_id,
         child_id
     ),
+    father_id UUID REFERENCES person (id),
+    mother_id UUID REFERENCES person (id),
+    child_id UUID REFERENCES person (id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    marrige_status marrige_status_type not null
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    
 );
+
+create or replace FUNCTION setAliveStatus()
+returns TRIGGER
+LANGUAGE plpgsql
+as $$
+BEGIN
+
+    if new.death_place != null THEN
+        new.isAlive = TRUE
+    else
+        new.isAlive = FALSE
+    
+    return new;
+
+END;
+$$;
+
+create trigger setAliveStatusTrigger
+after insert or update on person
+for each row
+execute function setAliveStatus();
+
 
 create or replace FUNCTION add_new_relation_trigger_func()
 returns TRIGGER
@@ -95,7 +123,7 @@ DECLARE
     v_count_all_characters_dead INTEGER :=0;
     -- v_count_all_characters_kids INTEGER;
     -- v_count_all_characters_parents I :=0NTEGER;
-    v_count_all_characters_male INTEGER;
+    v_count_all_characters_male INTEGER :=0;
     v_count_all_characters_female INTEGER :=0;
     -- v_count_all_characters_grandparents INTEGER;
     v_tree_id UUID;
@@ -119,10 +147,9 @@ BEGIN
         v_count_all_characters := v_count_all_characters + 1;
 
 
-        if NEW.death_date is NULL THEN
+        if NEW.isAlive is TRUE THEN
             v_count_all_characters_alive := v_count_all_characters_alive + 1;
         ELSE
-            v_count_all_characters_alive := v_count_all_characters_alive - 1;
             v_count_all_characters_dead := v_count_all_characters_dead + 1;
         end if;
         
@@ -139,10 +166,52 @@ BEGIN
             count_all_characters_dead = v_count_all_characters_dead,
             count_all_characters_male = v_count_all_characters_male,
             count_all_characters_female = v_count_all_characters_female,
-            updated_at = NOW()
         where id = v_tree_id;
 
     end if;
+
+    if tg_op = 'UPDATE' THEN
+        v_tree_id := new.geneology_tree_id;
+
+        SELECT count_all_characters,
+               count_all_characters_alive,
+               count_all_characters_dead,
+               count_all_characters_male,
+               count_all_characters_female
+        INTO v_count_all_characters,
+             v_count_all_characters_alive,
+             v_count_all_characters_dead,
+             v_count_all_characters_male,
+             v_count_all_characters_female
+        FROM geneology_tree
+        WHERE id = v_tree_id;
+
+        if new.isAlive is FALSE and old.isAlive is TRUE THEN
+            v_count_all_characters_alive := v_count_all_characters_alive - 1;
+        end if;
+
+        if new.isAlive is TRUE and old.isAlive is FALSE THEN
+            v_count_all_characters_dead := v_count_all_characters_dead - 1;
+        end if;
+
+        if OLD.gender = 'male' and new.gender = 'female' THEN
+            v_count_all_characters_male := v_count_all_characters_male - 1;
+        end if;
+
+        if OLD.gender = 'female' and new.gender = 'male' THEN
+            v_count_all_characters_female := v_count_all_characters_female - 1;
+        end if;
+
+        UPDATE geneology_tree
+        SET count_all_characters = v_count_all_characters,
+            count_all_characters_alive = v_count_all_characters_alive,
+            count_all_characters_dead = v_count_all_characters_dead,
+            count_all_characters_male = v_count_all_characters_male,
+            count_all_characters_female = v_count_all_characters_female,
+        where id = v_tree_id;
+        
+    end if;
+
 
     if tg_op = 'DELETE' THEN
 
@@ -162,7 +231,7 @@ BEGIN
         WHERE id = v_tree_id;
 
         v_count_all_characters := v_count_all_characters - 1;
-        if OLD.death_date is NULL THEN
+        if OLD.isAlive is TRUE THEN
             v_count_all_characters_alive := v_count_all_characters_alive - 1;
         ELSE
             v_count_all_characters_dead := v_count_all_characters_dead - 1;
@@ -181,7 +250,6 @@ BEGIN
             count_all_characters_dead = v_count_all_characters_dead,
             count_all_characters_male = v_count_all_characters_male,
             count_all_characters_female = v_count_all_characters_female,
-            updated_at = now()
         where id = v_tree_id;
         
     end if;
@@ -274,3 +342,23 @@ create or REPLACE TRIGGER count_related_characters_trigger
 after insert on relations
 for each row
 EXECUTE FUNCTION count_related_characters_trigger_func();
+
+create or REPLACE function auto_updated_at_trigger_func()
+returns TRIGGER
+LANGUAGE plpgsql
+as $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    return NEW;
+END;
+$$;
+
+create trigger auto_updated_at_trigger
+before update on person
+for each row
+EXECUTE FUNCTION auto_updated_at_trigger_func();
+
+create trigger auto_updated_at_trigger
+before update on relations
+for each row
+EXECUTE FUNCTION auto_updated_at_trigger_func();
