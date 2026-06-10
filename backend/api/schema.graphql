@@ -236,6 +236,7 @@ type Person {
   firstName: String!
   patronymic: String
   gender: Gender
+  age: Number!,
 
   birthPlace: BirthPlace!
 
@@ -253,19 +254,14 @@ type Person {
   # Метаданные
   createdAt: String!
   updatedAt: String!
-
-  # Вычисляемые поля
-  fullName: String!
-  age: Int
-  isAlive: Boolean!
-  lifeSpan: String
 }
 
 type Relation {
-  father_id: ID!
-  mother_id: ID!
-  child_id: ID!
-  marrige_status: String!
+  fatherId: ID!
+  motherId: ID!
+  childId: ID!
+  createdAt: String!
+  updatedAt: String!
 }
 
 type Geneology_tree {
@@ -289,12 +285,12 @@ input GeneologyTreeInput {
 # поменять схему инпута, нужно связать с остальными типами
 input CreatePersonInput {
   id: ID!
-
   surname: SurnameInput!
   maidenSurname: MaidenSurnameInput
   firstName: String!
   patronymic: String
   gender: Gender
+  age: Number!
   
   birthPlace: BirthPlaceInput!
   
@@ -340,6 +336,7 @@ type Query {
   tree(id: ID!): GenealogyTree
   persons: [Person!]
   person(id: ID!): Person
+  relations: [Relation!]
 }
 type Mutation {
   createPerson(input: CreatePersonInput!): Person!
