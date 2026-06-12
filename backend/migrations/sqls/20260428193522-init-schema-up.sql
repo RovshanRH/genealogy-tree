@@ -1,24 +1,24 @@
 
-create table base_table (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
+-- create table base_table (
+--     -- id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
+--     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+--     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+-- );
 
-create or REPLACE function AutoSetUpdateTimeData()
-returns TRIGGER
-LANGUAGE plpgsql
-as $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    return NEW;
-END;
-$$;
+-- create or REPLACE function AutoSetUpdateTimeData()
+-- returns TRIGGER
+-- LANGUAGE plpgsql
+-- as $$
+-- BEGIN
+--     NEW.updated_at = CURRENT_TIMESTAMP;
+--     return NEW;
+-- END;
+-- $$;
 
-create trigger AutoSetUpdateTimeDataPerson
-before update on base_table
-for each row
-EXECUTE FUNCTION AutoSetUpdateTimeData();
+-- create trigger AutoSetUpdateTimeDataPerson
+-- before update on base_table
+-- for each row
+-- EXECUTE FUNCTION AutoSetUpdateTimeData();
 
 -- Тип Пол
 CREATE TYPE gender_status as enum ('male', 'female');
@@ -52,10 +52,14 @@ CREATE TABLE IF NOT EXISTS person (
     bio TEXT,
     source_info TEXT,
     isPersonContacted BOOLEAN DEFAULT false,
-    isAlive BOOLEAN,
+    isAlive BOOLEAN
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-) INHERITS (base_table);
+)
+
+ALTER TABLE person 
+ADD CONSTRAINT fk_person_genealogy_tree 
+FOREIGN KEY (genealogy_tree_id) REFERENCES geneology_tree(id) ON DELETE CASCADE;
 -- Таблица Отношщений
 create Table if not exists relations (
     id uuid PRIMARY KEY (
@@ -63,7 +67,7 @@ create Table if not exists relations (
         motherId,
         personId,
         spouseId,
-        children
+        -- children
     ),
     fatherId UUID REFERENCES person (id),
     motherId UUID REFERENCES person (id),

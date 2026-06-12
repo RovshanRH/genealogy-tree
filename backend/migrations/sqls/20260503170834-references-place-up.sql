@@ -1,94 +1,91 @@
 /* Replace with your SQL commands */
 CREATE TABLE IF NOT EXISTS country (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name        VARCHAR(100) UNIQUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
+    name VARCHAR(100) UNIQUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 create table if not exists region (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    country_id  UUID REFERENCES country(id) ON DELETE RESTRICT,
-    name        VARCHAR(100) UNIQUE,
-    UNIQUE(country_id, name),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
+    country_id UUID REFERENCES country (id) ON DELETE RESTRICT,
+    name VARCHAR(100) UNIQUE,
+    UNIQUE (country_id, name),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 )
 
 -- 3. Города
 CREATE TABLE IF NOT EXISTS city (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    region_id UUID REFERENCES region(id) on delete restrict,
-    name        VARCHAR(150),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(region_id, name)
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
+    region_id UUID REFERENCES region (id) on delete restrict,
+    name VARCHAR(150),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (region_id, name)
 );
 
 -- Улица
 CREATE Table if not exists street (
-    id UUID Primary key DEFAULT gen_random_uuid(),
-    city_id UUID REFERENCES city(id) on delete RESTRICT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
+    id UUID Primary key DEFAULT gen_random_uuid (),
+    city_id UUID REFERENCES city (id) on delete RESTRICT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     name VARCHAR(200) not null
 );
 
 CREATE Table if not exists house (
-    id UUID Primary key DEFAULT gen_random_uuid(),
-    street_id UUID REFERENCES street(id) on delete RESTRICT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
+    id UUID Primary key DEFAULT gen_random_uuid (),
+    street_id UUID REFERENCES street (id) on delete RESTRICT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     name VARCHAR(50) not null
 );
 
 create table if not exists apartment (
-    id UUID Primary key DEFAULT gen_random_uuid(),
-    house_id UUID REFERENCES house(id) on delete RESTRICT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
+    id UUID Primary key DEFAULT gen_random_uuid (),
+    house_id UUID REFERENCES house (id) on delete RESTRICT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     name VARCHAR(50) not null
 );
 
-create or REPLACE function auto_updated_at_trigger_func()
-returns TRIGGER
-LANGUAGE plpgsql
-as $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    return NEW;
-END;
-$$;
+-- create or REPLACE function auto_updated_at_trigger_func()
+-- returns TRIGGER
+-- LANGUAGE plpgsql
+-- as $$
+-- BEGIN
+--     NEW.updated_at = CURRENT_TIMESTAMP;
+--     return NEW;
+-- END;
+-- $$;
 
-create trigger auto_updated_at_trigger
-before update on country
-for each row
-EXECUTE FUNCTION auto_updated_at_trigger_func();
+-- create trigger auto_updated_at_trigger
+-- before update on country
+-- for each row
+-- EXECUTE FUNCTION auto_updated_at_trigger_func();
 
-create trigger auto_updated_at_trigger
-before update on region
-for each row
-EXECUTE FUNCTION auto_updated_at_trigger_func();
+-- create trigger auto_updated_at_trigger
+-- before update on region
+-- for each row
+-- EXECUTE FUNCTION auto_updated_at_trigger_func();
 
-create trigger auto_updated_at_trigger
-before update on city
-for each row
-EXECUTE FUNCTION auto_updated_at_trigger_func();
+-- create trigger auto_updated_at_trigger
+-- before update on city
+-- for each row
+-- EXECUTE FUNCTION auto_updated_at_trigger_func();
 
-create trigger auto_updated_at_trigger
-before update on street
-for each row
-EXECUTE FUNCTION auto_updated_at_trigger_func();
+-- create trigger auto_updated_at_trigger
+-- before update on street
+-- for each row
+-- EXECUTE FUNCTION auto_updated_at_trigger_func();
 
-create trigger auto_updated_at_trigger
-before update on house
-for each row
-EXECUTE FUNCTION auto_updated_at_trigger_func();
+-- create trigger auto_updated_at_trigger
+-- before update on house
+-- for each row
+-- EXECUTE FUNCTION auto_updated_at_trigger_func();
 
-create trigger auto_updated_at_trigger
-before update on apartment
-for each row
-EXECUTE FUNCTION auto_updated_at_trigger_func();
+-- create trigger auto_updated_at_trigger
+-- before update on apartment
+-- for each row
+-- EXECUTE FUNCTION auto_updated_at_trigger_func();

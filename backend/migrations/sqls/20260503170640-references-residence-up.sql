@@ -14,21 +14,21 @@ CREATE TABLE IF NOT EXISTS residence (
     end_date            DATE,
     start_date_approx   BOOLEAN DEFAULT false,
     end_date_approx     BOOLEAN DEFAULT false,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-create or REPLACE function auto_updated_at_trigger_func()
-returns TRIGGER
-LANGUAGE plpgsql
-as $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    return NEW;
-END;
-$$;
+-- create or REPLACE function auto_updated_at_trigger_func()
+-- returns TRIGGER
+-- LANGUAGE plpgsql
+-- as $$
+-- BEGIN
+--     NEW.updated_at = CURRENT_TIMESTAMP;
+--     return NEW;
+-- END;
+-- $$;
 
-create trigger auto_updated_at_trigger
-before update on residence
-for each row
-EXECUTE FUNCTION auto_updated_at_trigger_func();
+-- create trigger auto_updated_at_trigger
+-- before update on residence
+-- for each row
+-- EXECUTE FUNCTION auto_updated_at_trigger_func();

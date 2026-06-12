@@ -1,6 +1,7 @@
 /* Replace with your SQL commands */
 CREATE table if not exists geneology_tree (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
+
     name varchar(300) not null,
 
 
@@ -11,26 +12,28 @@ CREATE table if not exists geneology_tree (
     count_all_characters_parents INTEGER DEFAULT 0,
     count_all_characters_male INTEGER DEFAULT 0,
     count_all_characters_female INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     -- count_all_characters_grandparents INTEGER DEFAULT 0,
+);
 
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)
+insert into geneology_tree (name) values ('name');
+select id from geneology_tree;
 
 -- Индексы
-create index if not exists idx_geneology_tree on geneology_tree (name);
--- Функции
-create or REPLACE function auto_updated_at_trigger_func()
-returns TRIGGER
-LANGUAGE plpgsql
-as $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    return NEW;
-END;
-$$;
+-- create index if not exists idx_geneology_tree on geneology_tree (name);
+-- -- Функции
+-- create or REPLACE function auto_updated_at_trigger_func()
+-- returns TRIGGER
+-- LANGUAGE plpgsql
+-- as $$
+-- BEGIN
+--     NEW.updated_at = CURRENT_TIMESTAMP;
+--     return NEW;
+-- END;
+-- $$;
 
-create trigger auto_updated_at_trigger
-before update on geneology_tree
-for each row
-EXECUTE FUNCTION auto_updated_at_trigger_func();
+-- create trigger auto_updated_at_trigger
+-- before update on geneology_tree
+-- for each row
+-- EXECUTE FUNCTION auto_updated_at_trigger_func();
