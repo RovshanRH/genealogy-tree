@@ -5,73 +5,55 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  // url = env("DATABASE_URL")
-}
-
-model Roles {
-  id    Int     @id
-  role  String  @unique @db.VarChar(100)
-  Users Users[]
-}
-
-model Users {
-  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  username      String    @unique @db.VarChar(100)
-  email         String    @unique @db.VarChar(100)
-  password_hash String    @db.VarChar(255)
-  role_id       Int?      @default(1)
-  is_blocked    Boolean?  @default(false)
-  last_login    DateTime? @db.Timestamp(6)
-  created_at    DateTime? @default(now()) @db.Timestamp(6)
-  updated_at    DateTime? @default(now()) @db.Timestamp(6)
-  Roles         Roles?    @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@index([email], map: "idx_users_email")
-  @@index([username], map: "idx_users_username")
 }
 
 model apartment {
-  id                                       String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  house_id                                 String      @db.Uuid
-  created_at                               DateTime?   @default(now()) @db.Timestamp(6)
-  name                                     String      @db.VarChar(50)
-  house                                    house       @relation(fields: [house_id], references: [id], onUpdate: NoAction)
-  person                                   person[]
-  residence_residence_apartmentToapartment residence[] @relation("residence_apartmentToapartment")
+  id                                       String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  house_id                                 String?       @db.Uuid
+  created_at                               DateTime?     @default(now()) @db.Timestamptz(6)
+  updated_at                               DateTime?     @default(now()) @db.Timestamptz(6)
+  name                                     String        @db.VarChar(50)
+  house                                    house?        @relation(fields: [house_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  birth_place                              birth_place[]
+  residence_residence_apartmentToapartment residence[]   @relation("residence_apartmentToapartment")
 }
 
 model city {
-  id                                      String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  region_id                               String      @db.Uuid
-  name                                    String      @db.VarChar(150)
-  created_at                              DateTime?   @default(now()) @db.Timestamp(6)
-  region                                  region      @relation(fields: [region_id], references: [id], onUpdate: NoAction)
-  person_person_birth_place_city_idTocity person[]    @relation("person_birth_place_city_idTocity")
-  person_person_death_place_city_idTocity person[]    @relation("person_death_place_city_idTocity")
-  residence                               residence[]
-  street                                  street[]
+  id                             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  region_id                      String?       @db.Uuid
+  name                           String?       @db.VarChar(150)
+  created_at                     DateTime?     @default(now()) @db.Timestamptz(6)
+  updated_at                     DateTime?     @default(now()) @db.Timestamptz(6)
+  birth_place                    birth_place[]
+  region                         region?       @relation(fields: [region_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  death_place                    death_place[]
+  residence_residence_cityTocity residence[]   @relation("residence_cityTocity")
+  street                         street[]
 
   @@unique([region_id, name])
 }
 
 model country {
-  id                                            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                                          String      @unique @db.VarChar(100)
-  created_at                                    DateTime?   @default(now()) @db.Timestamp(6)
-  person_person_birth_place_country_idTocountry person[]    @relation("person_birth_place_country_idTocountry")
-  person_person_death_place_country_idTocountry person[]    @relation("person_death_place_country_idTocountry")
-  region                                        region[]
-  residence                                     residence[]
+  id                                   String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                                 String?       @unique @db.VarChar(100)
+  created_at                           DateTime?     @default(now()) @db.Timestamptz(6)
+  updated_at                           DateTime?     @default(now()) @db.Timestamptz(6)
+  birth_place                          birth_place[]
+  death_place                          death_place[]
+  region                               region[]
+  residence_residence_countryTocountry residence[]   @relation("residence_countryTocountry")
 }
 
 model education {
-  id                                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  institution                        String?  @db.VarChar(200)
-  degree                             String?  @db.VarChar(100)
-  specialty                          String?  @db.VarChar(150)
+  id                                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institution                        String?   @db.VarChar(200)
+  degree                             String?   @db.VarChar(100)
+  specialty                          String?   @db.VarChar(150)
   year_start                         Int?
   year_end                           Int?
-  person_person_educationToeducation person[] @relation("person_educationToeducation")
+  created_at                         DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at                         DateTime? @default(now()) @db.Timestamptz(6)
+  person_person_educationToeducation person[]  @relation("person_educationToeducation")
 }
 
 model geneology_tree {
@@ -84,119 +66,121 @@ model geneology_tree {
   count_all_characters_parents Int?      @default(0)
   count_all_characters_male    Int?      @default(0)
   count_all_characters_female  Int?      @default(0)
-  updated_at                   DateTime? @default(now()) @db.Timestamp(6)
+  created_at                   DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at                   DateTime? @default(now()) @db.Timestamptz(6)
   person                       person[]
-
-  @@index([name], map: "idx_geneology_tree")
 }
 
 model house {
-  id                               String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  street_id                        String      @db.Uuid
-  created_at                       DateTime?   @default(now()) @db.Timestamp(6)
-  name                             String      @db.VarChar(50)
+  id                               String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  street_id                        String?       @db.Uuid
+  created_at                       DateTime?     @default(now()) @db.Timestamptz(6)
+  updated_at                       DateTime?     @default(now()) @db.Timestamptz(6)
+  name                             String        @db.VarChar(50)
   apartment                        apartment[]
-  street                           street      @relation(fields: [street_id], references: [id], onUpdate: NoAction)
-  person                           person[]
-  residence_residence_houseTohouse residence[] @relation("residence_houseTohouse")
+  birth_place                      birth_place[]
+  street                           street?       @relation(fields: [street_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  residence_residence_houseTohouse residence[]   @relation("residence_houseTohouse")
 }
 
 model maiden_surname {
-  id                                           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                                         String?  @db.VarChar(100)
-  person_person_maiden_surnameTomaiden_surname person[] @relation("person_maiden_surnameTomaiden_surname")
-}
-
-model migrations {
-  id     Int      @id @default(autoincrement())
-  name   String   @db.VarChar(255)
-  run_on DateTime @db.Timestamp(6)
-}
-
-model nationality {
   id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name       String    @unique @db.VarChar(100)
-  updated_at DateTime? @default(now()) @db.Timestamp(6)
+  name       String?   @db.VarChar(100)
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at DateTime? @default(now()) @db.Timestamptz(6)
   person     person[]
 }
 
+model nationality {
+  id                                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                                   String?   @unique @db.VarChar(100)
+  created_at                             DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at                             DateTime? @default(now()) @db.Timestamptz(6)
+  person_person_nationalityTonationality person[]  @relation("person_nationalityTonationality")
+}
+
 model occupation {
-  id                                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title                                String   @db.VarChar(150)
-  organization                         String?  @db.VarChar(200)
+  id                                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title                                String?   @db.VarChar(150)
+  organization                         String?   @db.VarChar(200)
   start_year                           Int?
   end_year                             Int?
-  person_person_occupationTooccupation person[] @relation("person_occupationTooccupation")
+  created_at                           DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at                           DateTime? @default(now()) @db.Timestamptz(6)
+  person_person_occupationTooccupation person[]  @relation("person_occupationTooccupation")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model person {
-  id                                                   String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  geneology_tree_id                                    String?         @db.Uuid
-  mother_id                                            String?         @db.Uuid
-  father_id                                            String?         @db.Uuid
-  surname                                              String?         @db.Uuid
-  maiden_surname                                       String?         @db.Uuid
-  first_name                                           String          @db.VarChar(100)
-  patronymic                                           String?         @db.VarChar(100)
-  gender                                               gender_status
-  occupation                                           String?         @db.Uuid
-  education                                            String?         @db.Uuid
-  residence                                            String?         @db.Uuid
-  birth_date                                           DateTime?       @db.Date
-  birth_date_approx                                    Boolean?        @default(false)
-  birth_place_country_id                               String?         @db.Uuid
-  birth_place_city_id                                  String?         @db.Uuid
-  birth_place_street                                   String?         @db.Uuid
-  birth_place_house                                    String?         @db.Uuid
-  birth_place_apartment                                String?         @db.Uuid
-  death_date                                           DateTime?       @db.Date
-  death_date_approx                                    Boolean?        @default(false)
-  death_place_country_id                               String?         @db.Uuid
-  death_place_city_id                                  String?         @db.Uuid
-  nationality_id                                       String?         @db.Uuid
-  social_status_id                                     String?         @db.Uuid
-  bio                                                  String?
-  source_info                                          String?
-  is_person_contacted                                  Boolean?        @default(false)
-  created_at                                           DateTime?       @default(now()) @db.Timestamp(6)
-  updated_at                                           DateTime?       @default(now()) @db.Timestamp(6)
-  apartment                                            apartment?      @relation(fields: [birth_place_apartment], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  city_person_birth_place_city_idTocity                city?           @relation("person_birth_place_city_idTocity", fields: [birth_place_city_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  country_person_birth_place_country_idTocountry       country?        @relation("person_birth_place_country_idTocountry", fields: [birth_place_country_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  house                                                house?          @relation(fields: [birth_place_house], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  street                                               street?         @relation(fields: [birth_place_street], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  city_person_death_place_city_idTocity                city?           @relation("person_death_place_city_idTocity", fields: [death_place_city_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  country_person_death_place_country_idTocountry       country?        @relation("person_death_place_country_idTocountry", fields: [death_place_country_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  education_person_educationToeducation                education?      @relation("person_educationToeducation", fields: [education], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  person_person_father_idToperson                      person?         @relation("person_father_idToperson", fields: [father_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  other_person_person_father_idToperson                person[]        @relation("person_father_idToperson")
-  geneology_tree                                       geneology_tree? @relation(fields: [geneology_tree_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  maiden_surname_person_maiden_surnameTomaiden_surname maiden_surname? @relation("person_maiden_surnameTomaiden_surname", fields: [maiden_surname], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  person_person_mother_idToperson                      person?         @relation("person_mother_idToperson", fields: [mother_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  other_person_person_mother_idToperson                person[]        @relation("person_mother_idToperson")
-  nationality                                          nationality?    @relation(fields: [nationality_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  occupation_person_occupationTooccupation             occupation?     @relation("person_occupationTooccupation", fields: [occupation], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  residence_person_residenceToresidence                residence?      @relation("person_residenceToresidence", fields: [residence], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  social_status                                        social_status?  @relation(fields: [social_status_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  surname_person_surnameTosurname                      surname?        @relation("person_surnameTosurname", fields: [surname], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id                                          String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  genealogy_tree_id                           String?              @db.Uuid
+  mother                                      String?              @db.Uuid
+  father                                      String?              @db.Uuid
+  marital_status                              marriage_status_type @default(single)
+  spouse                                      String?              @db.Uuid
+  surname                                     String?              @db.Uuid
+  maidensurname                               String?              @db.Uuid
+  firstname                                   String               @db.VarChar(100)
+  patronymic                                  String?              @db.VarChar(100)
+  fullname                                    String?              @db.VarChar(300)
+  age                                         Int
+  gender                                      gender_status
+  occupation                                  String?              @db.Uuid
+  education                                   String?              @db.Uuid
+  fulladdress                                 String?              @db.VarChar(1000)
+  cityaddress                                 String?              @db.VarChar(800)
+  residence                                   String?              @db.Uuid
+  nationality                                 String?              @db.Uuid
+  socialstatus                                String?              @db.Uuid
+  birth_place                                 String?              @db.Uuid
+  death_place                                 String?              @db.Uuid
+  bio                                         String?
+  source_info                                 String?
+  ispersoncontacted                           Boolean?             @default(false)
+  isalive                                     Boolean?
+  created_at                                  DateTime?            @default(now()) @db.Timestamptz(6)
+  updated_at                                  DateTime?            @default(now()) @db.Timestamptz(6)
+  birth_place_person_birth_placeTobirth_place birth_place?         @relation("person_birth_placeTobirth_place", fields: [birth_place], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  death_place_person_death_placeTodeath_place death_place?         @relation("person_death_placeTodeath_place", fields: [death_place], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  education_person_educationToeducation       education?           @relation("person_educationToeducation", fields: [education], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  person_person_fatherToperson                person?              @relation("person_fatherToperson", fields: [father], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_person_person_fatherToperson          person[]             @relation("person_fatherToperson")
+  geneology_tree                              geneology_tree?      @relation(fields: [genealogy_tree_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  maiden_surname                              maiden_surname?      @relation(fields: [maidensurname], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  person_person_motherToperson                person?              @relation("person_motherToperson", fields: [mother], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_person_person_motherToperson          person[]             @relation("person_motherToperson")
+  nationality_person_nationalityTonationality nationality?         @relation("person_nationalityTonationality", fields: [nationality], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  occupation_person_occupationTooccupation    occupation?          @relation("person_occupationTooccupation", fields: [occupation], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  residence_person_residenceToresidence       residence?           @relation("person_residenceToresidence", fields: [residence], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  social_status                               social_status?       @relation(fields: [socialstatus], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  person_person_spouseToperson                person?              @relation("person_spouseToperson", fields: [spouse], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_person_person_spouseToperson          person[]             @relation("person_spouseToperson")
+  surname_person_surnameTosurname             surname?             @relation("person_surnameTosurname", fields: [surname], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  relations_relations_fatheridToperson        relations[]          @relation("relations_fatheridToperson")
+  relations_relations_motheridToperson        relations[]          @relation("relations_motheridToperson")
+  relations_relations_personidToperson        relations[]          @relation("relations_personidToperson")
+  relations_relations_spouseidToperson        relations[]          @relation("relations_spouseidToperson")
+
+  @@index([cityaddress], map: "idx_person_cityaddress")
+  @@index([fullname], map: "idx_person_fullname")
 }
 
 model region {
   id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  country_id String    @db.Uuid
-  name       String    @unique @db.VarChar(100)
-  created_at DateTime? @default(now()) @db.Timestamp(6)
+  country_id String?   @db.Uuid
+  name       String?   @unique @db.VarChar(100)
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at DateTime? @default(now()) @db.Timestamptz(6)
   city       city[]
-  country    country   @relation(fields: [country_id], references: [id], onUpdate: NoAction)
+  country    country?  @relation(fields: [country_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
 
   @@unique([country_id, name])
 }
 
 model residence {
   id                                       String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  country_id                               String?    @db.Uuid
-  city_id                                  String?    @db.Uuid
+  country                                  String?    @db.Uuid
+  city                                     String?    @db.Uuid
   street                                   String?    @db.Uuid
   house                                    String?    @db.Uuid
   apartment                                String?    @db.Uuid
@@ -204,37 +188,92 @@ model residence {
   end_date                                 DateTime?  @db.Date
   start_date_approx                        Boolean?   @default(false)
   end_date_approx                          Boolean?   @default(false)
+  created_at                               DateTime?  @default(now()) @db.Timestamptz(6)
+  updated_at                               DateTime?  @default(now()) @db.Timestamptz(6)
   person_person_residenceToresidence       person[]   @relation("person_residenceToresidence")
   apartment_residence_apartmentToapartment apartment? @relation("residence_apartmentToapartment", fields: [apartment], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  city                                     city?      @relation(fields: [city_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  country                                  country?   @relation(fields: [country_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  city_residence_cityTocity                city?      @relation("residence_cityTocity", fields: [city], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  country_residence_countryTocountry       country?   @relation("residence_countryTocountry", fields: [country], references: [id], onDelete: NoAction, onUpdate: NoAction)
   house_residence_houseTohouse             house?     @relation("residence_houseTohouse", fields: [house], references: [id], onDelete: NoAction, onUpdate: NoAction)
   street_residence_streetTostreet          street?    @relation("residence_streetTostreet", fields: [street], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model social_status {
   id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String    @unique @db.VarChar(100)
+  name        String?   @unique @db.VarChar(100)
   description String?
-  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime? @default(now()) @db.Timestamptz(6)
   person      person[]
 }
 
 model street {
-  id                                 String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  city_id                            String      @db.Uuid
-  created_at                         DateTime?   @default(now()) @db.Timestamp(6)
-  name                               String      @db.VarChar(200)
+  id                                 String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  city_id                            String?       @db.Uuid
+  created_at                         DateTime?     @default(now()) @db.Timestamptz(6)
+  updated_at                         DateTime?     @default(now()) @db.Timestamptz(6)
+  name                               String        @db.VarChar(200)
+  birth_place                        birth_place[]
   house                              house[]
-  person                             person[]
-  residence_residence_streetTostreet residence[] @relation("residence_streetTostreet")
-  city                               city        @relation(fields: [city_id], references: [id], onUpdate: NoAction)
+  residence_residence_streetTostreet residence[]   @relation("residence_streetTostreet")
+  city                               city?         @relation(fields: [city_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
 }
 
 model surname {
-  id                             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                           String   @db.VarChar(100)
-  person_person_surnameTosurname person[] @relation("person_surnameTosurname")
+  id                             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                           String?   @db.VarChar(100)
+  created_at                     DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at                     DateTime? @default(now()) @db.Timestamptz(6)
+  person_person_surnameTosurname person[]  @relation("person_surnameTosurname")
+}
+
+model birth_place {
+  id                                     String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  birth_date                             DateTime?  @db.Date
+  birth_date_approx                      Boolean?   @default(false)
+  birth_place_country_id                 String?    @db.Uuid
+  birth_place_city_id                    String?    @db.Uuid
+  birth_place_street                     String?    @db.Uuid
+  birth_place_house                      String?    @db.Uuid
+  birth_place_apartment                  String?    @db.Uuid
+  created_at                             DateTime?  @default(now()) @db.Timestamptz(6)
+  updated_at                             DateTime?  @default(now()) @db.Timestamptz(6)
+  apartment                              apartment? @relation(fields: [birth_place_apartment], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  city                                   city?      @relation(fields: [birth_place_city_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  country                                country?   @relation(fields: [birth_place_country_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  house                                  house?     @relation(fields: [birth_place_house], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  street                                 street?    @relation(fields: [birth_place_street], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  person_person_birth_placeTobirth_place person[]   @relation("person_birth_placeTobirth_place")
+}
+
+model death_place {
+  id                                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  death_date                             DateTime? @db.Date
+  death_date_approx                      Boolean?  @default(false)
+  death_place_country_id                 String?   @db.Uuid
+  death_place_city_id                    String?   @db.Uuid
+  created_at                             DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at                             DateTime? @default(now()) @db.Timestamptz(6)
+  city                                   city?     @relation(fields: [death_place_city_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  country                                country?  @relation(fields: [death_place_country_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  person_person_death_placeTodeath_place person[]  @relation("person_death_placeTodeath_place")
+}
+
+model relations {
+  id                                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fatherid                          String?   @db.Uuid
+  motherid                          String?   @db.Uuid
+  personid                          String?   @db.Uuid
+  spouseid                          String?   @db.Uuid
+  autonaming                        String?   @db.VarChar(50)
+  created_at                        DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at                        DateTime? @default(now()) @db.Timestamptz(6)
+  person_relations_fatheridToperson person?   @relation("relations_fatheridToperson", fields: [fatherid], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  person_relations_motheridToperson person?   @relation("relations_motheridToperson", fields: [motherid], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  person_relations_personidToperson person?   @relation("relations_personidToperson", fields: [personid], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  person_relations_spouseidToperson person?   @relation("relations_spouseidToperson", fields: [spouseid], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([fatherid, motherid, personid, spouseid])
 }
 
 enum gender_status {
@@ -242,7 +281,9 @@ enum gender_status {
   female
 }
 
-enum marrige_status_type {
+enum marriage_status_type {
   divorced
-  undivorced
+  single
+  widowed
+  married
 }

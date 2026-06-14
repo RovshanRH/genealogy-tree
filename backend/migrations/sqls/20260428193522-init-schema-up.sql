@@ -54,30 +54,28 @@ CREATE TABLE IF NOT EXISTS person (
     bio TEXT,
     source_info TEXT,
     isPersonContacted BOOLEAN DEFAULT false,
-    isAlive BOOLEAN
+    isAlive BOOLEAN,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 )
 
+create index if not exists idx_person_fullName on person(fullName);
+
+create index if not exists idx_person_cityAddress on person(cityAddress);
+
 
 -- Таблица Отношщений
 create Table if not exists relations (
-    id uuid PRIMARY KEY (
-        fatherId,
-        motherId,
-        personId,
-        spouseId,
-        -- children
-    ),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     fatherId UUID REFERENCES person (id),
     motherId UUID REFERENCES person (id),
     personId UUID REFERENCES person (id),
     spouseId UUID REFERENCES person (id),
-    -- children UUID [] REFERENCES person (id),
     autoNaming VARCHAR(50),
+    UNIQUE (fatherId, motherId, personId, spouseId),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-) INHERITS (base_table);
+)
 
 -- Функция обновления статуса жизни
 create or replace FUNCTION setAliveStatus()
@@ -87,9 +85,10 @@ as $$
 BEGIN
 
     if new.death_place IS NOT null THEN
-        new.isAlive = TRUE
+        new.isAlive := TRUE;
     else
-        new.isAlive = FALSE
+        new.isAlive := FALSE;
+    end if;
     
     return new;
 
@@ -101,21 +100,20 @@ after insert or update on person
 for each row
 execute function setAliveStatus();
 -- Валидация семейного положения
-create or replace FUNCTION checkMaritalStatus()
-returns TRIGGER
+CREATE OR REPLACE FUNCTION checkMaritalStatus()
+RETURNS TRIGGER
 LANGUAGE plpgsql
-as $$
+AS $$
 BEGIN
+    IF NEW.spouse IS NOT NULL AND (NEW.marital_status = 'single' OR NEW.marital_status = 'divorced') THEN
+        RAISE EXCEPTION 'Супруг/супруга указан/указана, но супружеский статус является "%"', NEW.marital_status;
+    END IF;
     
-    if new.spouse = null and marital_status = 'married' OR marital_status = 'widowed' THEN
-        RAISE EXCEPTION 'Супруг/супруга не указан/указана, но супружеский статус является %', marital_status
+    IF NEW.spouse IS NULL AND (NEW.marital_status = 'married' OR NEW.marital_status = 'widowed') THEN
+        RAISE EXCEPTION 'Супруг/супруга не указан/указана, но супружеский статус является "%"', NEW.marital_status;
     END IF;
-
-    if new.spouse IS NOT null and marital_status = 'single' OR marital_status = 'divorced' THEN
-        RAISE EXCEPTION 'Супруг/супруга указан/указана, но супружеский статус является %', marital_status
-
-    END IF;
-        
+    
+    RETURN NEW;
 END;
 $$;
 -- Триггер с этой функцией
@@ -132,10 +130,10 @@ DECLARE
     full_name VARCHAR(300);
 BEGIN
     if first_name is NULL THEN
-        raise EXCEPTION 'Имя отсутсвует'
+        raise EXCEPTION 'Имя отсутсвует';
     end if;
 
-    full_name = last_name + ' ' + first_name + ' ' + patronymic;
+    full_name := last_name + ' ' + first_name + ' ' + patronymic;
 
     RETURN full_name;
 
@@ -184,9 +182,9 @@ BEGIN
     LEFT JOIN apartment a ON a.id = res.apartment
     WHERE res.id = residence_id;
 
-    fullAddress = concat_ws(', ', concat('Страна: ', v_country_name), concat('Регион: ', v_region_name), concat('г. ', v_city_name), concat('ул. ', v_street_name), v_house_name, v_apartment_name);
+    fullAddress := concat_ws(', ', concat('Страна: ', v_country_name), concat('Регион: ', v_region_name), concat('г. ', v_city_name), concat('ул. ', v_street_name), v_house_name, v_apartment_name);
 
-    cityAddress = concat_ws(', ', concat('г. ', v_city_name), concat('ул. ', v_street_name), v_house_name, v_apartment_name);
+    cityAddress := concat_ws(', ', concat('г. ', v_city_name), concat('ул. ', v_street_name), v_house_name, v_apartment_name);
 
     RETURN ARRAY[fullAddress, cityAddress];
 
@@ -201,13 +199,18 @@ language plpgsql
 as $$
 DECLARE
     v_surname_name VARCHAR(50);
+    v_addresses varchar[];
 BEGIN
     SELECT name into v_surname_name FROM surname where id = new.surname;
 
-    new.fullName = fullNameCreater(new.first_name, v_surname_name, new.patronymic);
+    new.fullName := fullNameCreater(new.first_name, v_surname_name, new.patronymic);
 
-    new.fullAddress = fulAddressCreater(new.residence)[1];
-    new.cityAddress = fulAddressCreater(new.residence)[2];
+    v_addresses := ulAddressCreater(new.residence);
+
+    new.fullAddress := v_addresses[1];
+    new.cityAddress := v_addresses[2];
+
+    
 
     return new;
 
@@ -217,7 +220,7 @@ $$;
 create trigger autoFillingRowsTrigger
 after insert or update on person
 for each row
-EXECUTE autoFillingRows();
+EXECUTE FUNCTION autoFillingRows();
 
 -- Самообновление relations с insert update и delete при добавлении нового человека
 create or replace FUNCTION relationCRUD()
@@ -275,19 +278,18 @@ EXECUTE FUNCTION relationCRUD();
 -- $$;
 
 -- Подсчет человечков для таблицы дерева
-create or replace Function countCharacters()
-returns TRIGGER
-language plpgsql
-as $$
+CREATE OR REPLACE FUNCTION countCharacters()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
 DECLARE
-    v_count_all_characters INTEGER :=0;
-    v_count_all_characters_alive INTEGER :=0;
-    v_count_all_characters_dead INTEGER :=0;
-    v_count_all_characters_kids INTEGER :=0;
-    v_count_all_characters_parents INTEGER :=0;
-    v_count_all_characters_male INTEGER :=0;
-    v_count_all_characters_female INTEGER :=0;
-    -- v_count_all_characters_grandparents INTEGER;
+    v_count_all_characters INTEGER := 0;
+    v_count_all_characters_alive INTEGER := 0;
+    v_count_all_characters_dead INTEGER := 0;
+    v_count_all_characters_kids INTEGER := 0;
+    v_count_all_characters_parents INTEGER := 0;
+    v_count_all_characters_male INTEGER := 0;
+    v_count_all_characters_female INTEGER := 0;
     v_tree_id UUID;
 BEGIN
     IF TG_OP = 'DELETE' THEN
@@ -313,120 +315,109 @@ BEGIN
     FROM geneology_tree
     WHERE id = v_tree_id;
 
-    if tg_op = 'INSERT' THEN
-
+    IF TG_OP = 'INSERT' THEN
         v_count_all_characters := v_count_all_characters + 1;
 
-
-        if NEW.isAlive is TRUE THEN
+        IF NEW.isAlive IS TRUE THEN
             v_count_all_characters_alive := v_count_all_characters_alive + 1;
         ELSE
             v_count_all_characters_dead := v_count_all_characters_dead + 1;
-        end if;
+        END IF;
         
-        if new.gender = 'male' THEN
+        IF NEW.gender = 'male' THEN
             v_count_all_characters_male := v_count_all_characters_male + 1;
-        end if;
-        if new.gender = 'female' THEN
+        ELSIF NEW.gender = 'female' THEN
             v_count_all_characters_female := v_count_all_characters_female + 1;
-        end if;
+        END IF;
 
-        -- if new. IS NOT null then 
-        --     v_count_all_characters_kids := v_count_all_characters_kids + 1;
-        -- end if;
-        if new.father IS NOT null then 
+        IF NEW.father IS NOT NULL THEN 
             v_count_all_characters_parents := v_count_all_characters_parents + 1;
-        end if;
-        if new.mother IS NOT null then 
+        END IF;
+        IF NEW.mother IS NOT NULL THEN 
             v_count_all_characters_parents := v_count_all_characters_parents + 1;
-        end if;
+        END IF;
 
-        if new.mother is NOT NULL and new.father is not null THEN
-            v_count_all_characters_kids := v_count_all_characters_kids + 1
-        end if;
+        IF NEW.mother IS NOT NULL AND NEW.father IS NOT NULL THEN
+            v_count_all_characters_kids := v_count_all_characters_kids + 1;
+        END IF;
+    END IF;
 
-        
-
-    end if;
-
-    if tg_op = 'UPDATE' THEN
-
-        if new.isAlive is FALSE and old.isAlive is TRUE THEN
+    -- Обработка UPDATE
+    IF TG_OP = 'UPDATE' THEN
+        IF NEW.isAlive IS FALSE AND OLD.isAlive IS TRUE THEN
             v_count_all_characters_alive := v_count_all_characters_alive - 1;
             v_count_all_characters_dead := v_count_all_characters_dead + 1;
+        END IF;
 
-        end if;
-
-        if new.isAlive is TRUE and old.isAlive is FALSE THEN
+        IF NEW.isAlive IS TRUE AND OLD.isAlive IS FALSE THEN
             v_count_all_characters_alive := v_count_all_characters_alive + 1;
             v_count_all_characters_dead := v_count_all_characters_dead - 1;
+        END IF;
 
-        end if;
-
-        if OLD.gender = 'male' and new.gender = 'female' THEN
+        -- Изменение пола
+        IF OLD.gender = 'male' AND NEW.gender = 'female' THEN
             v_count_all_characters_female := v_count_all_characters_female + 1;
             v_count_all_characters_male := v_count_all_characters_male - 1;
-        end if;
+        END IF;
 
-        if OLD.gender = 'female' and new.gender = 'male' THEN
+        IF OLD.gender = 'female' AND NEW.gender = 'male' THEN
             v_count_all_characters_female := v_count_all_characters_female - 1;
             v_count_all_characters_male := v_count_all_characters_male + 1;
+        END IF;
 
-        end if;
-
-        if old.mother is null and new.mother IS NOT null THEN
+        IF OLD.mother IS NULL AND NEW.mother IS NOT NULL THEN
             v_count_all_characters_parents := v_count_all_characters_parents + 1;
-        end if;
+        END IF;
 
-        if old.father IS null and new.father IS NOT null THEN
+        IF OLD.father IS NULL AND NEW.father IS NOT NULL THEN
             v_count_all_characters_parents := v_count_all_characters_parents + 1;
-        end if;
+        END IF;
 
-        if old.mother IS NOT null and new.mother is null THEN
+        IF OLD.mother IS NOT NULL AND NEW.mother IS NULL THEN
             v_count_all_characters_parents := v_count_all_characters_parents - 1;
-        end if;
+        END IF;
 
-        if old.father IS NOT null and new.father is null THEN
+        IF OLD.father IS NOT NULL AND NEW.father IS NULL THEN
             v_count_all_characters_parents := v_count_all_characters_parents - 1;
-        end if;
+        END IF;
 
-        
-    end if;
+        IF OLD.mother IS NOT NULL AND OLD.father IS NOT NULL AND 
+           (NEW.mother IS NULL OR NEW.father IS NULL) THEN
+            v_count_all_characters_kids := v_count_all_characters_kids - 1;
+        END IF;
 
+        IF (OLD.mother IS NULL OR OLD.father IS NULL) AND 
+           NEW.mother IS NOT NULL AND NEW.father IS NOT NULL THEN
+            v_count_all_characters_kids := v_count_all_characters_kids + 1;
+        END IF;
+    END IF;
 
-    if tg_op = 'DELETE' THEN
+    IF TG_OP = 'DELETE' THEN
+        v_count_all_characters := v_count_all_characters - 1;
 
-        -- v_count_all_characters := v_count_all_characters - 1;
-
-        if OLD.isAlive is TRUE THEN
+        IF OLD.isAlive IS TRUE THEN
             v_count_all_characters_alive := v_count_all_characters_alive - 1;
         ELSE
             v_count_all_characters_dead := v_count_all_characters_dead - 1;
-        end if;
+        END IF;
         
-        if OLD.gender = 'male' THEN
+        IF OLD.gender = 'male' THEN
             v_count_all_characters_male := v_count_all_characters_male - 1;
-        end if;
-        if OLD.gender = 'female' THEN
+        ELSIF OLD.gender = 'female' THEN
             v_count_all_characters_female := v_count_all_characters_female - 1;
-        end if;
+        END IF;
 
-        -- if new.personId IS NOT null then 
-        --     v_count_all_characters_kids := v_count_all_characters_kids - 1;
-        -- end if;
-        if new.fatherId IS NOT null then 
+        IF OLD.father IS NOT NULL THEN 
             v_count_all_characters_parents := v_count_all_characters_parents - 1;
-        end if;
-        if new.motherId IS NOT null then 
+        END IF;
+        IF OLD.mother IS NOT NULL THEN 
             v_count_all_characters_parents := v_count_all_characters_parents - 1;
-        end if;
-        if new.mother is NOT NULL and new.father is not null THEN
-            v_count_all_characters_kids := v_count_all_characters_kids - 1
-        end if;
+        END IF;
 
-        
-        
-    end if;
+        IF OLD.mother IS NOT NULL AND OLD.father IS NOT NULL THEN
+            v_count_all_characters_kids := v_count_all_characters_kids - 1;
+        END IF;
+    END IF;
 
     v_count_all_characters := GREATEST(v_count_all_characters, 0);
     v_count_all_characters_alive := GREATEST(v_count_all_characters_alive, 0);
@@ -437,23 +428,22 @@ BEGIN
     v_count_all_characters_kids := GREATEST(v_count_all_characters_kids, 0);
 
     UPDATE geneology_tree
-        SET count_all_characters = v_count_all_characters,
-            count_all_characters_alive = v_count_all_characters_alive,
-            count_all_characters_dead = v_count_all_characters_dead,
-            count_all_characters_male = v_count_all_characters_male,
-            count_all_characters_female = v_count_all_characters_female,
-            count_all_characters_kids = v_count_all_characters_kids,
-            count_all_characters_parents = v_count_all_characters_parents
-        where id = v_tree_id;
+    SET count_all_characters = v_count_all_characters,
+        count_all_characters_alive = v_count_all_characters_alive,
+        count_all_characters_dead = v_count_all_characters_dead,
+        count_all_characters_male = v_count_all_characters_male,
+        count_all_characters_female = v_count_all_characters_female,
+        count_all_characters_kids = v_count_all_characters_kids,
+        count_all_characters_parents = v_count_all_characters_parents
+    WHERE id = v_tree_id;
 
-    
-    
+    -- Для INSERT/UPDATE возвращаем NEW, для DELETE возвращаем OLD
     IF TG_OP = 'DELETE' THEN
         RETURN OLD;
     ELSE
         RETURN NEW;
     END IF;
-END; 
+END;
 $$;
 -- Триггер с этой функцией
 create or REPLACE TRIGGER countCharactersTrigger

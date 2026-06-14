@@ -260,6 +260,7 @@ type Relation {
   fatherId: ID!
   motherId: ID!
   childId: ID!
+  spouseID: ID!
   createdAt: String!
   updatedAt: String!
 }
@@ -346,4 +347,7 @@ type Mutation {
   createTree(input: GenealogyTreeInput!): GenealogyTree!
   updateTree(id: ID!, input: GenealogyTreeInput!): GenealogyTree!
   deleteTree(id: ID!): Boolean!
+
+
+
 }
