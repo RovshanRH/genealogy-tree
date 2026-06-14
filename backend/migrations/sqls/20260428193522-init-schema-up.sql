@@ -42,6 +42,8 @@ CREATE TABLE IF NOT EXISTS person (
     gender gender_status not NULL,
     occupation uuid REFERENCES occupation (id),
     education uuid REFERENCES education (id),
+    fullAddress VARCHAR(1000),
+    cityAddress VARCHAR(800),
     residence uuid REFERENCES residence (id),
     nationality UUID REFERENCES nationality (id),
     socialStatus UUID REFERENCES social_status (id),
@@ -57,9 +59,7 @@ CREATE TABLE IF NOT EXISTS person (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 )
 
-ALTER TABLE person 
-ADD CONSTRAINT fk_person_genealogy_tree 
-FOREIGN KEY (genealogy_tree_id) REFERENCES geneology_tree(id) ON DELETE CASCADE;
+
 -- Таблица Отношщений
 create Table if not exists relations (
     id uuid PRIMARY KEY (
@@ -124,6 +124,101 @@ after insert or update or delete on person
 for each row
 execute FUNCTION checkMaritalStatus();
 
+CREATE or REPLACE FUNCTION fullNameCreater(first_name VARCHAR(100), last_name VARCHAR(100), patronymic VARCHAR(100))
+returns VARCHAR(300)
+language plpgsql
+as $$
+DECLARE
+    full_name VARCHAR(300);
+BEGIN
+    if first_name is NULL THEN
+        raise EXCEPTION 'Имя отсутсвует'
+    end if;
+
+    full_name = last_name + ' ' + first_name + ' ' + patronymic;
+
+    RETURN full_name;
+
+END;
+$$;
+
+create or REPLACE FUNCTION fulAddressCreater(residence_id UUID)
+RETURNS VARCHAR[]
+language plpgsql
+as $$
+
+DECLARE
+    
+    v_country_name VARCHAR(100);
+    v_region_name VARCHAR(100);
+    v_city_name VARCHAR(150);
+    v_street_name VARCHAR(200);
+    v_house_name VARCHAR(50);
+    v_apartment_name VARCHAR(50);
+    v_residence_record record;
+
+    fullAddress VARCHAR(1000);
+    cityAddress VARCHAR(800);
+
+BEGIN
+    SELECT 
+        c.name AS country_name,
+        r.name AS region_name,
+        ct.name AS city_name,
+        s.name AS street_name,
+        h.name AS house_name,
+        a.name AS apartment_name
+    INTO 
+        v_country_name,
+        v_region_name,
+        v_city_name,
+        v_street_name,
+        v_house_name,
+        v_apartment_name
+    FROM residence res
+    LEFT JOIN country c ON c.id = res.country
+    LEFT JOIN region r ON r.country_id = res.country
+    LEFT JOIN city ct ON ct.id = res.city
+    LEFT JOIN street s ON s.id = res.street
+    LEFT JOIN house h ON h.id = res.house
+    LEFT JOIN apartment a ON a.id = res.apartment
+    WHERE res.id = residence_id;
+
+    fullAddress = concat_ws(', ', concat('Страна: ', v_country_name), concat('Регион: ', v_region_name), concat('г. ', v_city_name), concat('ул. ', v_street_name), v_house_name, v_apartment_name);
+
+    cityAddress = concat_ws(', ', concat('г. ', v_city_name), concat('ул. ', v_street_name), v_house_name, v_apartment_name);
+
+    RETURN ARRAY[fullAddress, cityAddress];
+
+END;
+$$;
+
+
+
+create or replace FUNCTION autoFillingRows()
+RETURNS TRIGGER
+language plpgsql
+as $$
+DECLARE
+    v_surname_name VARCHAR(50);
+BEGIN
+    SELECT name into v_surname_name FROM surname where id = new.surname;
+
+    new.fullName = fullNameCreater(new.first_name, v_surname_name, new.patronymic);
+
+    new.fullAddress = fulAddressCreater(new.residence)[1];
+    new.cityAddress = fulAddressCreater(new.residence)[2];
+
+    return new;
+
+END;
+$$;
+
+create trigger autoFillingRowsTrigger
+after insert or update on person
+for each row
+EXECUTE autoFillingRows();
+
 -- Самообновление relations с insert update и delete при добавлении нового человека
 create or replace FUNCTION relationCRUD()
 returns TRIGGER
@@ -132,7 +227,7 @@ as $$
 
 BEGIN
     if tg_op = 'INSERT' THEN
-        INSERT INTO relations (fatherId, motherId, personId, spouseId, children) VALUES
+        INSERT INTO relations (fatherId, motherId, personId, spouseId) VALUES
         (
             new.father,
             new.mother,
@@ -145,12 +240,13 @@ BEGIN
     end if;
     if tf_op = 'UPDATE' THEN
         UPDATE relations
-        SET fatherId = new.fatherId,
-            motherId = new.motherId,
-            personId = new.id
-        WHERE fatherId = old.fatherId 
-        AND motherId = old.motherId 
-        AND personId = old.personId;
+        SET fatherId = new.father,
+            motherId = new.mother,
+            personId = new.id,
+            spouseId = new.spouse
+        WHERE fatherId = old.father 
+        AND motherId = old.mother
+        AND personId = old.person;
     end if;
 
     IF TG_OP = 'DELETE' THEN
@@ -166,6 +262,18 @@ CREATE TRIGGER relationCRUDTrigger
 AFTER INSERT OR DELETE OR UPDATE ON person
 FOR EACH ROW
 EXECUTE FUNCTION relationCRUD();
+
+-- create FUNCTION countKids()
+-- RETURNS INTEGER
+-- language plpgsql
+-- as $$
+-- DECLARE
+--     v_count_all_kids INTEGER := 0;
+-- BEGIN
+
+-- END;
+-- $$;
+
 -- Подсчет человечков для таблицы дерева
 create or replace Function countCharacters()
 returns TRIGGER
@@ -175,7 +283,7 @@ DECLARE
     v_count_all_characters INTEGER :=0;
     v_count_all_characters_alive INTEGER :=0;
     v_count_all_characters_dead INTEGER :=0;
-    -- v_count_all_characters_kids INTEGER :=0;
+    v_count_all_characters_kids INTEGER :=0;
     v_count_all_characters_parents INTEGER :=0;
     v_count_all_characters_male INTEGER :=0;
     v_count_all_characters_female INTEGER :=0;
@@ -193,14 +301,14 @@ BEGIN
             count_all_characters_dead,
             count_all_characters_male,
             count_all_characters_female,
-            -- count_all_characters_kids,
+            count_all_characters_kids,
             count_all_characters_parents
     INTO v_count_all_characters,
             v_count_all_characters_alive,
             v_count_all_characters_dead,
             v_count_all_characters_male,
             v_count_all_characters_female,
-            -- v_count_all_characters_kids,
+            v_count_all_characters_kids,
             v_count_all_characters_parents
     FROM geneology_tree
     WHERE id = v_tree_id;
@@ -231,6 +339,11 @@ BEGIN
         end if;
         if new.mother IS NOT null then 
             v_count_all_characters_parents := v_count_all_characters_parents + 1;
+        end if;
+
+        if new.mother is NOT NULL and new.father is not null THEN
+            v_count_all_characters_kids := v_count_all_characters_kids + 1
+        end if;
 
         
 
@@ -307,6 +420,9 @@ BEGIN
         if new.motherId IS NOT null then 
             v_count_all_characters_parents := v_count_all_characters_parents - 1;
         end if;
+        if new.mother is NOT NULL and new.father is not null THEN
+            v_count_all_characters_kids := v_count_all_characters_kids - 1
+        end if;
 
         
         
@@ -318,6 +434,7 @@ BEGIN
     v_count_all_characters_male := GREATEST(v_count_all_characters_male, 0);
     v_count_all_characters_female := GREATEST(v_count_all_characters_female, 0);
     v_count_all_characters_parents := GREATEST(v_count_all_characters_parents, 0);
+    v_count_all_characters_kids := GREATEST(v_count_all_characters_kids, 0);
 
     UPDATE geneology_tree
         SET count_all_characters = v_count_all_characters,
@@ -325,7 +442,7 @@ BEGIN
             count_all_characters_dead = v_count_all_characters_dead,
             count_all_characters_male = v_count_all_characters_male,
             count_all_characters_female = v_count_all_characters_female,
-            -- count_all_characters_kids = v_count_all_characters_kids,
+            count_all_characters_kids = v_count_all_characters_kids,
             count_all_characters_parents = v_count_all_characters_parents
         where id = v_tree_id;
 

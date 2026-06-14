@@ -8,18 +8,3 @@ CREATE TABLE IF NOT EXISTS occupation (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
-
--- create or REPLACE function auto_updated_at_trigger_func()
--- returns TRIGGER
--- LANGUAGE plpgsql
--- as $$
--- BEGIN
---     NEW.updated_at = CURRENT_TIMESTAMP;
---     return NEW;
--- END;
--- $$;
-
--- create trigger auto_updated_at_trigger
--- before update on occupation
--- for each row
--- EXECUTE FUNCTION auto_updated_at_trigger_func();
