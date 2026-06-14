@@ -42,9 +42,9 @@ CREATE TABLE IF NOT EXISTS person (
     gender gender_status not NULL,
     occupation uuid REFERENCES occupation (id),
     education uuid REFERENCES education (id),
+    residence uuid REFERENCES residence (id),
     fullAddress VARCHAR(1000),
     cityAddress VARCHAR(800),
-    residence uuid REFERENCES residence (id),
     nationality UUID REFERENCES nationality (id),
     socialStatus UUID REFERENCES social_status (id),
     -- birthplace
@@ -58,6 +58,19 @@ CREATE TABLE IF NOT EXISTS person (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 )
+
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_update_updated_at
+    BEFORE UPDATE ON person
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
 
 create index if not exists idx_person_fullName on person(fullName);
 
@@ -76,6 +89,8 @@ create Table if not exists relations (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 )
+
+select * from geneology_tree;
 
 -- Функция обновления статуса жизни
 create or replace FUNCTION setAliveStatus()
