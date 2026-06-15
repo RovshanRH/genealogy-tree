@@ -398,15 +398,15 @@ type Query {
   persons: [Person]!
   person(id: ID!): Person
   # Characteristics
-  occupation(title: String!): Occupation
+  occupation(id: String!): Occupation
   person_occupations(personId: ID!): [Occupation]
   occupations: [Occupation]
 
-  education(title: String!): Education
+  education(id: String!): Education
   person_educations(personId: ID!): [Education]
   educations: [Education]
 
-  residence(title: String!): Residence
+  residence(id: String!): Residence
   person_residentials(personId: ID!): [Residence]
   residentials: [Residence]
   # Relationships

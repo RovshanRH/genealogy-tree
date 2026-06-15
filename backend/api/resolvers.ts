@@ -5,199 +5,191 @@ import { prisma } from "../lib/prisma.ts";
 import { z } from "zod";
 import { publicProcedure } from "../api_auth/trpc.ts";
 // import { publicProcedure } from '../api_auth/trpc';
+// import { occupation, relations } from '../generated/prisma/browser';
 import type {
   personCreateInput,
   personFindFirstArgs,
   personUpdateInput,
   personUncheckedCreateInput,
-  personCreateManyGeneology_treeInputEnvelope,
+  personUncheckedUpdateInput,
 } from "../generated/prisma/models/person";
-import type { apartmentCreateWithoutPersonInput } from "../generated/prisma/models/apartment.ts";
-import type { houseCreateWithoutApartmentInput } from "../generated/prisma/models/house.ts";
-import type { streetCreateWithoutHouseInput } from "../generated/prisma/models/street.ts";
+
 import type {
-  cityCreateWithoutStreetInput,
-  cityCreateOrConnectWithoutRegionInput,
-} from "../generated/prisma/models/city.ts";
-import type { regionCreateWithoutCityInput } from "../generated/prisma/models/region.ts";
-import type { countryCreateWithoutRegionInput } from "../generated/prisma/models/country.ts";
-// import { prisma } from '../lib/prisma';
-// import { Context } from '../server/context';
-import type { PrismaClient } from "@prisma/client/extension";
-// import { apartment, maiden_surname, geneology_tree } from '../generated/prisma/browser';
-import type { occupationCreateWithoutPerson_person_occupationTooccupationInput } from "../generated/prisma/models/occupation.ts";
-import type { educationCreateWithoutPerson_person_educationToeducationInput } from "../generated/prisma/models/education.ts";
-import type { nationalityCreateWithoutPersonInput } from "../generated/prisma/models/nationality.ts";
-import type { social_statusCreateWithoutPersonInput } from "../generated/prisma/models/social_status.ts";
-import type { residenceCreateInput } from "../generated/prisma/models/residence.ts";
-import type {
-  geneology_treeCreateInput,
-  geneology_treeUpdateInput,
-} from "../generated/prisma/models/geneology_tree.ts";
-import { create } from "domain";
-import { error } from "node:console";
-// import { geneology_tree } from '../generated/prisma/models/geneology_tree';
+  genealogy_treeCreateInput,
+  genealogy_treeUpdateInput,
+} from "../generated/prisma/models/genealogy_tree.ts";
 
 export const resolvers = {
   Query: {
     trees: async () => {
       try {
-        const geneology_trees = await prisma?.geneology_tree.findMany();
-        return geneology_trees;
+        const genealogy_trees = await prisma?.genealogy_tree.findMany();
+        return genealogy_trees;
       } catch (error: any) {
         console.error("Error finding trees", error);
       }
     },
     tree: async (_parent: unknown, args: { id: string }) => {
       try {
-        const geneology_tree =
-        await prisma?.geneology_tree.findFirst({
+        const genealogy_tree = await prisma?.genealogy_tree.findFirst({
           where: { id: args.id },
         });
-        return geneology_tree
+        return genealogy_tree;
       } catch (error: any) {
         console.error("Error finding tree", error);
       }
     },
     persons: async () => {
       try {
-        const people = 
-        await prisma?.person.findMany();
-        return people
+        const people = await prisma?.person.findMany();
+        return people;
       } catch (error: any) {
         console.error("Error finding people", error);
       }
     },
     person: async (_parent: unknown, args: { id: string }) => {
       try {
-        const person =
-        await prisma?.person.findFirst({
-        where: { id: args.id },
+        const person = await prisma?.person.findFirst({
+          where: { id: args.id },
         });
         return person;
       } catch (error: any) {
         console.error("Error finding person", error);
       }
     },
+    // occupation
+    occupation: async (_parent: unknown, args: {id: string}) => {
+      try {
+        const occupation = await prisma.occupation.findFirst({
+          where: {id: args.id}
+        });
+        return occupation
+      } catch (error: any) {
+        console.error("Error finding occupation by id", error)
+      }
+    },
+    person_occupations: async (_parent: unknown, args: {personId: string}) => {
+      try {
+        const occupations = await prisma.person_occupations.findMany({
+          where: {
+            person_id: args.personId
+          }
+        })
+        return occupations
+      } catch (error: any) {
+        console.error(`Error finding occupations for person ${args.personId}`, error)
+      }
+    },
+    occupations: async () => {
+      try {
+        const occupations = await prisma.occupation.findMany();
+        return occupations;
+      } catch (error: any) {
+        console.error("Error finding all occupations", error);
+      }
+    },
+    // education
+    education: async (_parent: unknown, args: {id: string}) => {
+      try {
+        const education = await prisma.education.findFirst({
+          where: {id: args.id}
+        });
+        return education
+      } catch (error: any) {
+        console.error("Error finding education by id", error)
+      }
+    },
+    person_educations: async (_parent: unknown, args: {personId: string}) => {
+      try {
+        const educations = await prisma.person_educations.findMany({
+          where: {
+            person_id: args.personId
+          }
+        })
+        return educations
+      } catch (error: any) {
+        console.error(`Error finding educations for person ${args.personId}`, error)
+      }
+    },
+    educations: async () => {
+      try {
+        const educations = await prisma.education.findMany();
+        return educations;
+      } catch (error: any) {
+        console.error("Error finding all educations", error);
+      }
+    },
+    // residence
+    residence: async (_parent: unknown, args: {id: string}) => {
+      try {
+        const residence = await prisma.residence.findFirst({
+          where: {id: args.id}
+        });
+        return residence
+      } catch (error: any) {
+        console.error("Error finding residence by id", error)
+      }
+    },
+    person_residences: async (_parent: unknown, args: {personId: string}) => {
+      try {
+        const residences = await prisma.person_residentials.findMany({
+          where: {
+            person_id: args.personId
+          }
+        })
+        return residences
+      } catch (error: any) {
+        console.error(`Error finding residences for person ${args.personId}`, error)
+      }
+    },
+    residences: async () => {
+      try {
+        const residences = await prisma.residence.findMany();
+        return residences;
+      } catch (error: any) {
+        console.error("Error finding all residences", error);
+      }
+    },
+    relations: async () => {
+      try {
+        const relations = await prisma.relations.findMany();
+        return relations;
+      } catch (error: any) {
+        console.error("Error finding all relationships", error)
+      }
+    }
   },
   Mutation: {
     // CRUD персонажей
     createPerson: async (
       _parent: unknown,
       args: {
-        person_input: personUncheckedCreateInput;
-        apartment_input: apartmentCreateWithoutPersonInput;
-        house_input: houseCreateWithoutApartmentInput;
-        street_input: streetCreateWithoutHouseInput;
-        city_input: cityCreateWithoutStreetInput;
-        region_input: regionCreateWithoutCityInput;
-        country_input: countryCreateWithoutRegionInput;
-        city_where: cityCreateOrConnectWithoutRegionInput;
-        occupation_input: occupationCreateWithoutPerson_person_occupationTooccupationInput;
-        education_input: educationCreateWithoutPerson_person_educationToeducationInput;
-        nationality_input: nationalityCreateWithoutPersonInput;
-        social_status_input: social_statusCreateWithoutPersonInput;
-        residence_input: residenceCreateInput;
+        input: personCreateInput;
+        mother_input: personUncheckedCreateInput | null;
+        father_input: personUncheckedCreateInput | null;
+        spouse_input: personUncheckedCreateInput | null;
       },
-      context: { prisma: PrismaClient },
+      // context: { prisma: PrismaClient },
     ) => {
       try {
-        const { prisma } = context;
-        const newPerson = prisma?.person.create({
+        // const { prisma } = context;
+
+        const newPerson = await prisma.$transaction(async (tx) => {
+          // const mother_input = args.mother_input;
+          // const mother = await tx.person.create({
+          //   data: {
+          //     ...mother_input, // ТРИ точки, а не две
+          //   },
+          // });
+        });
+
+        const Person = await prisma.person.create({
           data: {
-            first_name: args.person_input.first_name,
-            patronymic: args.person_input.patronymic,
-            gender: args.person_input.gender,
-            birth_date: args.person_input.birth_date,
-            birth_date_approx: args.person_input.birth_date_approx,
-            death_date: args.person_input.death_date,
-            death_date_approx: args.person_input.death_date_approx,
-            bio: args.person_input.bio,
-            source_info: args.person_input.source_info,
-            is_person_contacted: args.person_input.is_person_contacted,
-
-            geneology_tree_id: args.person_input.geneology_tree_id,
-            mother_id: args.person_input.mother_id,
-            father_id: args.person_input.father_id,
-            surname: {
-              create: args.person_input.surname,
-            },
-            maiden_surname: {
-              create: args.person_input.maiden_surname,
-            },
-            occupation: {
-              create: {
-                title: args.occupation_input.title,
-                organization: args.occupation_input.organization,
-                start_year: args.occupation_input.start_year,
-                end_year: args.occupation_input.end_year,
-              },
-            },
-            education: {
-              create: {
-                institution: args.education_input.institution,
-                degree: args.education_input.degree,
-                start_year: args.education_input.year_start,
-                end_year: args.education_input.year_end,
-              },
-            },
-            nationality: {
-              create: {
-                name: args.nationality_input.name,
-              },
-            },
-            social_status: {
-              create: {
-                name: args.social_status_input.name,
-                description: args.social_status_input.description,
-              },
-            },
-
-            residence: {
-              create: {
-                start_date: args.residence_input.start_date,
-                end_date: args.residence_input.end_date,
-                start_date_approx: args.residence_input.start_date_approx,
-                end_date_approx: args.residence_input.end_date_approx,
-                country: {
-                  create: {
-                    name: args.country_input.name,
-                  },
-                },
-                city: {
-                  create: {
-                    name: args.city_input.name,
-                  },
-                },
-                street: {
-                  create: {
-                    name: args.street_input.name,
-                  },
-                },
-                house: {
-                  create: {
-                    name: args.house_input.name,
-                  },
-                },
-                apartment: {
-                  create: {
-                    name: args.apartment_input.name,
-                  },
-                },
-              },
-            },
-
-            birth_place_country_id: args.person_input.birth_place_country_id,
-            birth_place_city_id: args.person_input.birth_place_city_id,
-            birth_place_street: args.person_input.birth_place_street,
-            birth_place_house: args.person_input.birth_place_house,
-            birth_place_apartment: args.person_input.birth_place_apartment,
-
-            death_place_country_id: args.person_input.death_place_country_id,
-            death_place_city_id: args.person_input.death_place_city_id,
+            ...args.input,
           },
         });
-        return newPerson;
+
+        return Person;
       } catch (error: any) {
         console.error("Error creating person:", error);
         throw new Error(`Failed to create person: ${error.message}`);
@@ -205,15 +197,15 @@ export const resolvers = {
     },
     updatePerson: async (
       _parent: unknown,
-      args: { person_input: personUpdateInput },
-      context: { prisma: PrismaClient },
+      args: { input: personUpdateInput; id: string },
+      // context: { prisma: PrismaClient },
     ) => {
       try {
-        const { person_input } = args;
-        const { prisma } = context;
+        // const { input } = args;
+        // const { prisma } = context;
         const updated_at = new Date();
         const selectedPerson = await prisma.person.findUnique({
-          where: { id: person_input.id },
+          where: { id: args.id },
         });
         if (!selectedPerson) {
           throw new Error("Person not found");
@@ -222,7 +214,7 @@ export const resolvers = {
         const updatedPerson = prisma.person.update({
           where: { id: selectedPerson.id },
           data: {
-            ...person_input,
+            ...args.input,
             updated_at,
           },
         });
@@ -236,10 +228,10 @@ export const resolvers = {
     deletePerson: async (
       _parent: unknown,
       args: { id: string },
-      context: { prisma: PrismaClient },
+      // context: { prisma: PrismaClient },
     ) => {
       try {
-        const { prisma } = context;
+        // const { prisma } = context;
         const deletedPerson = await prisma.person.delete({
           where: { id: args.id },
         });
@@ -252,16 +244,16 @@ export const resolvers = {
     // CRUD деревьев
     createTree: async (
       _parent: unknown,
-      args: { input: geneology_treeCreateInput },
+      args: { input: genealogy_treeCreateInput },
       // context: { prisma: PrismaClient }
     ) => {
       try {
         // const { prisma } = context;
         const { input } = args;
-        const newTree = await prisma.geneology_tree.create({
+        const newTree = await prisma.genealogy_tree.create({
           data: {
-            name: input.name
-          }
+            name: input.name,
+          },
         });
         return newTree;
       } catch (error: any) {
@@ -271,18 +263,18 @@ export const resolvers = {
     },
     updateTree: async (
       _parent: unknown,
-      args: { input: geneology_treeUpdateInput, id: string },
-      context: { prisma: PrismaClient },
+      args: { input: genealogy_treeUpdateInput; id: string },
+      // context: { prisma: PrismaClient },
     ) => {
       try {
-        const { prisma } = context;
+        // const { prisma } = context;
         // const { input } = args;
-        const updated_at = new Date();
-        const updatedTree = await prisma.geneology_tree.update({
+        // const updated_at = new Date();
+        const updatedTree = await prisma.genealogy_tree.update({
           where: { id: args.id },
           data: {
             ...args.input,
-            updated_at,
+            // updated_at,
           },
         });
         return updatedTree;
@@ -294,11 +286,11 @@ export const resolvers = {
     deleteTree: async (
       _parent: unknown,
       args: { id: string },
-      context: { prisma: PrismaClient },
+      // context: { prisma: PrismaClient },
     ) => {
       try {
-        const { prisma } = context;
-        const deletedTree = await prisma.geneology_tree.delete({
+        // const { prisma } = context;
+        const deletedTree = await prisma.genealogy_tree.delete({
           where: { id: args.id },
         });
         return deletedTree !== null;
