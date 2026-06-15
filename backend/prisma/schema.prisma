@@ -122,7 +122,7 @@ model person {
   death_place_person_death_placeTodeath_place death_place?          @relation("person_death_placeTodeath_place", fields: [death_place], references: [id], onDelete: NoAction, onUpdate: NoAction)
   person_person_fatherToperson                person?               @relation("person_fatherToperson", fields: [father], references: [id], onDelete: NoAction, onUpdate: NoAction)
   other_person_person_fatherToperson          person[]              @relation("person_fatherToperson")
-  geneology_tree                              genealogy_tree?       @relation(fields: [genealogy_tree_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  genealogy_tree                              genealogy_tree?       @relation(fields: [genealogy_tree_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   maiden_surname                              maiden_surname?       @relation(fields: [maidensurname], references: [id], onDelete: NoAction, onUpdate: NoAction)
   person_person_motherToperson                person?               @relation("person_motherToperson", fields: [mother], references: [id], onDelete: NoAction, onUpdate: NoAction)
   other_person_person_motherToperson          person[]              @relation("person_motherToperson")
