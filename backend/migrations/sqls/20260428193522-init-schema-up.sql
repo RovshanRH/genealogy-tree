@@ -1,4 +1,3 @@
-
 -- create table base_table (
 --     -- id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
 --     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -28,24 +27,32 @@ create type marriage_status_type as enum ('divorced', 'single', 'widowed', 'marr
 CREATE TABLE IF NOT EXISTS person (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
     genealogy_tree_id uuid,
-    foreign key (genealogy_tree_id) REFERENCES geneology_tree (id) on delete cascade,
+    foreign key (genealogy_tree_id) REFERENCES genealogy_tree (id) on delete cascade,
     mother uuid REFERENCES person (id),
     father uuid REFERENCES person (id),
     marital_status marriage_status_type not null DEFAULT 'single',
     spouse uuid REFERENCES person (id),
+    -- Фамилия
     surname UUID REFERENCES surname (id),
+    -- Девичья Фамилия
     maidenSurname UUID REFERENCES maiden_surname (id),
-    firstName VARCHAR(100) NOT NULL,
-    patronymic VARCHAR(100),
-    fullName VARCHAR(300),
+    firstName VARCHAR(200) NOT NULL,
+    patronymic VARCHAR(200),
+    fullName VARCHAR(500),
     age INT not NULL,
     gender gender_status not NULL,
-    occupation uuid REFERENCES occupation (id),
-    education uuid REFERENCES education (id),
-    residence uuid REFERENCES residence (id),
-    fullAddress VARCHAR(1000),
-    cityAddress VARCHAR(800),
+-- все работы
+    -- person_occupations uuid REFERENCES person_occupations (id),
+    -- все учебы
+    -- person_educations uuid REFERENCES person_educations (id),
+    -- все жилища
+    -- person_residentials uuid REFERENCES person_residentials (id),
+-- адреса
+    fullAddress VARCHAR(1000)[],
+    cityAddress VARCHAR(1000)[],
+-- национальность
     nationality UUID REFERENCES nationality (id),
+    -- социальный статус
     socialStatus UUID REFERENCES social_status (id),
     -- birthplace
     birth_place uuid REFERENCES birth_place (id),
@@ -57,6 +64,40 @@ CREATE TABLE IF NOT EXISTS person (
     isAlive BOOLEAN,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+
+)
+
+alter Table person add CONSTRAINT chk_maiden_surname CHECK (
+        (gender = 'female' AND spouse IS NOT NULL AND maidenSurname IS NOT NULL) OR
+        (gender != 'female' AND maidenSurname IS NULL)
+    )
+
+create table if not exists person_occupations (
+    id uuid PRIMARY key DEFAULT gen_random_uuid (),
+    person_id uuid REFERENCES person (id),
+    occupation_id uuid REFERENCES occupation (id),
+    start_date DATE,
+    end_date DATE,
+    is_primary BOOLEAN DEFAULT FALSE
+)
+
+create table if not exists person_educations (
+    id uuid PRIMARY key DEFAULT gen_random_uuid (),
+    person_id uuid REFERENCES person (id),
+    education_id uuid REFERENCES education (id),
+    entry_year INT,
+    graduation_year INT
+)
+
+create table if not exists person_residentials (
+    id uuid PRIMARY key DEFAULT gen_random_uuid (),
+    person_id uuid REFERENCES person (id),
+    residence_id uuid REFERENCES residence (id),
+    start_date DATE,
+    end_date DATE,
+    start_date_approx BOOLEAN DEFAULT false,
+    end_date_approx BOOLEAN DEFAULT false,
+    is_current BOOLEAN DEFAULT FALSE
 )
 
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -72,20 +113,24 @@ CREATE TRIGGER trigger_update_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
-create index if not exists idx_person_fullName on person(fullName);
+create index if not exists idx_person_fullName on person (fullName);
 
-create index if not exists idx_person_cityAddress on person(cityAddress);
-
+create index if not exists idx_person_cityAddress on person (cityAddress);
 
 -- Таблица Отношщений
 create Table if not exists relations (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
     fatherId UUID REFERENCES person (id),
     motherId UUID REFERENCES person (id),
     personId UUID REFERENCES person (id),
     spouseId UUID REFERENCES person (id),
     autoNaming VARCHAR(50),
-    UNIQUE (fatherId, motherId, personId, spouseId),
+    UNIQUE (
+        fatherId,
+        motherId,
+        personId,
+        spouseId
+    ),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 )
@@ -155,7 +200,7 @@ BEGIN
 END;
 $$;
 
-create or REPLACE FUNCTION fulAddressCreater(residence_id UUID)
+create or REPLACE FUNCTION fullAddressCreater(residence_id UUID)
 RETURNS VARCHAR[]
 language plpgsql
 as $$
@@ -206,26 +251,51 @@ BEGIN
 END;
 $$;
 
-
-
 create or replace FUNCTION autoFillingRows()
 RETURNS TRIGGER
 language plpgsql
 as $$
 DECLARE
     v_surname_name VARCHAR(50);
-    v_addresses varchar[];
+    v_address_data varchar[];
+    v_residential_addresses uuid[];
+    v_residence_record RECORD;
 BEGIN
     SELECT name into v_surname_name FROM surname where id = new.surname;
 
     new.fullName := fullNameCreater(new.first_name, v_surname_name, new.patronymic);
 
-    v_addresses := ulAddressCreater(new.residence);
+    SELECT ARRAY_AGG(residence_id) INTO v_residential_addresses from person_residentials where person_id = new.id;
 
-    new.fullAddress := v_addresses[1];
-    new.cityAddress := v_addresses[2];
+    -- FOREACH x in array v_residential_addresses
+    -- LOOP
+    --    v_addresses := v_addresses || fullAddressCreater(x);
 
-    
+    --     new.fullAddress := new.fullAddress || v_addresses[1];
+    --     new.cityAddress := new.cityAddress || v_addresses[2];
+
+    --     v_addresses := ARRAY[]::VARCHAR[];
+
+    -- END LOOP;
+
+    IF v_residential_addresses IS NOT NULL THEN
+        FOR v_residence_record IN 
+            SELECT residence_id FROM person_residentials 
+            WHERE person_id = NEW.id
+        LOOP
+            -- Получаем данные адреса (предполагаем, что функция возвращает массив)
+            v_address_data := fullAddressCreater(v_residence_record.residence_id);
+            
+            -- Добавляем адреса в массивы
+            IF array_length(v_address_data, 1) >= 1 THEN
+                NEW.full_address := NEW.full_address || v_address_data[1];
+            END IF;
+            
+            IF array_length(v_address_data, 1) >= 2 THEN
+                NEW.city_address := NEW.city_address || v_address_data[2];
+            END IF;
+        END LOOP;
+    END IF;
 
     return new;
 
@@ -308,9 +378,9 @@ DECLARE
     v_tree_id UUID;
 BEGIN
     IF TG_OP = 'DELETE' THEN
-        v_tree_id := OLD.geneology_tree_id;
+        v_tree_id := OLD.genealagy_tree_id;
     ELSE
-        v_tree_id := NEW.geneology_tree_id;
+        v_tree_id := NEW.genealagy_tree_id;
     END IF;
 
     SELECT count_all_characters,
@@ -327,7 +397,7 @@ BEGIN
             v_count_all_characters_female,
             v_count_all_characters_kids,
             v_count_all_characters_parents
-    FROM geneology_tree
+    FROM genealagy_tree
     WHERE id = v_tree_id;
 
     IF TG_OP = 'INSERT' THEN
@@ -442,7 +512,7 @@ BEGIN
     v_count_all_characters_parents := GREATEST(v_count_all_characters_parents, 0);
     v_count_all_characters_kids := GREATEST(v_count_all_characters_kids, 0);
 
-    UPDATE geneology_tree
+    UPDATE genealagy_tree
     SET count_all_characters = v_count_all_characters,
         count_all_characters_alive = v_count_all_characters_alive,
         count_all_characters_dead = v_count_all_characters_dead,
@@ -468,7 +538,6 @@ EXECUTE FUNCTION countCharacters();
 -- Функция для обновления update статуса
 
 -- Триггер с этой функцией
-
 
 -- Триггер с этой функцией
 

@@ -1,10 +1,7 @@
 /* Replace with your SQL commands */
-CREATE table if not exists geneology_tree (
+CREATE table if not exists genealogy_tree (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-
     name varchar(300) not null,
-
-
     count_all_characters INTEGER DEFAULT 0,
     count_all_characters_alive INTEGER DEFAULT 0,
     count_all_characters_dead INTEGER DEFAULT 0,
@@ -26,9 +23,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trigger_update_updated_at
-    BEFORE UPDATE ON geneology_tree
+    BEFORE UPDATE ON genealagy_tree
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
-insert into geneology_tree (name) values ('name');
-select id from geneology_tree;

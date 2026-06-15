@@ -4,8 +4,7 @@ CREATE TABLE IF NOT EXISTS education (
     institution     VARCHAR(200),
     degree          VARCHAR(100),
     specialty       VARCHAR(150),
-    year_start      INTEGER,
-    year_end        INTEGER,
+    
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
