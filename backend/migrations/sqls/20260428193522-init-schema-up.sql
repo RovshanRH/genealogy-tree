@@ -41,16 +41,16 @@ CREATE TABLE IF NOT EXISTS person (
     fullName VARCHAR(500),
     age INT not NULL,
     gender gender_status not NULL,
--- все работы
+    -- все работы
     -- person_occupations uuid REFERENCES person_occupations (id),
     -- все учебы
     -- person_educations uuid REFERENCES person_educations (id),
     -- все жилища
     -- person_residentials uuid REFERENCES person_residentials (id),
--- адреса
-    fullAddress VARCHAR(1000)[],
-    cityAddress VARCHAR(1000)[],
--- национальность
+    -- адреса
+    fullAddress VARCHAR(1000) [],
+    cityAddress VARCHAR(1000) [],
+    -- национальность
     nationality UUID REFERENCES nationality (id),
     -- социальный статус
     socialStatus UUID REFERENCES social_status (id),
@@ -64,13 +64,20 @@ CREATE TABLE IF NOT EXISTS person (
     isAlive BOOLEAN,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-
 )
 
-alter Table person add CONSTRAINT chk_maiden_surname CHECK (
-        (gender = 'female' AND spouse IS NOT NULL AND maidenSurname IS NOT NULL) OR
-        (gender != 'female' AND maidenSurname IS NULL)
+alter Table person
+add CONSTRAINT chk_maiden_surname CHECK (
+    (
+        gender = 'female'
+        AND spouse IS NOT NULL
+        AND maidenSurname IS NOT NULL
     )
+    OR (
+        gender != 'female'
+        AND maidenSurname IS NULL
+    )
+)
 
 create table if not exists person_occupations (
     id uuid PRIMARY key DEFAULT gen_random_uuid (),
@@ -135,7 +142,7 @@ create Table if not exists relations (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 )
 
-select * from geneology_tree;
+select * from genealogy_tree;
 
 -- Функция обновления статуса жизни
 create or replace FUNCTION setAliveStatus()
