@@ -1,6 +1,5 @@
 type Surname {
   id: ID!
-  name: String!
   value: String!
 
   createdAt: String!
@@ -8,13 +7,11 @@ type Surname {
 }
 
 input SurnameInput {
-  name: String
-  value: String
+  value: String!
 }
 
 input MaidenSurnameInput {
-  name: String
-  value: String
+  value: String!
 }
 
 type Country {
@@ -265,7 +262,7 @@ type Person {
   # Основные данные
   surname: Surname!
   maidenSurname: Surname
-  firstname: String!
+  firstName: String!
   patronymic: String!
   gender: Gender
   age: Int
@@ -307,7 +304,7 @@ input CreatePersonInput {
   # Основные данные
   surname: SurnameInput!
   maidenSurname: SurnameInput
-  firstname: String!
+  firstName: String!
   patronymic: String!
   gender: Gender
   age: Int
@@ -340,7 +337,7 @@ input UpdatePersonInput {
   # Основные данные
   surname: SurnameInput!
   maidenSurname: SurnameInput
-  firstname: String!
+  firstName: String!
   patronymic: String!
   gender: Gender
   age: Int
@@ -362,6 +359,7 @@ input UpdatePersonInput {
   isPersonContacted: Boolean
   isAlive: Boolean
 }
+
 
 type Relation {
   fatherId: ID
@@ -390,6 +388,7 @@ input GenealogyTreeInput {
   name: String!
 }
 
+
 # query и mutations
 type Query {
   # Tree
@@ -416,7 +415,7 @@ type Query {
 type Mutation {
   # Person
   createPerson(input: CreatePersonInput!): Person!
-  updatePerson(id: ID!, input: UpdatePersonInput!): Person!
+  updatePerson(id: ID!, input: CreatePersonInput!): Person!
   deletePerson(id: ID!): Person!
 
   # Occupation
@@ -424,7 +423,7 @@ type Mutation {
   updateOccupation(input: OccupationInput!): Occupation!
   deleteOccupation(id: ID!): Occupation!
 
-  # Education
+  # Education 
   createEducation(input: EducationInput!): Education!
   updateEducation(input: EducationInput!): Education!
   deleteEducation(id: ID!): Education!
@@ -434,7 +433,7 @@ type Mutation {
   updateResidence(input: ResidenceInput!): Residence!
   deleteResidence(id: ID!): Residence!
 
-  # Tree
+  # Tree 
   createTree(input: GenealogyTreeInput!): GenealogyTree!
   updateTree(id: ID!, input: GenealogyTreeInput!): GenealogyTree!
   deleteTree(id: ID!): GenealogyTree!
