@@ -142,7 +142,6 @@ create Table if not exists relations (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 )
 
-select * from genealogy_tree;
 
 -- Функция обновления статуса жизни
 create or replace FUNCTION setAliveStatus()

@@ -1,7 +1,7 @@
 /* Replace with your SQL commands */
 CREATE TABLE IF NOT EXISTS country (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-    name VARCHAR(100) UNIQUE,
+    name VARCHAR(100),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS country (
 create table if not exists region (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
     country_id UUID REFERENCES country (id) ON DELETE RESTRICT,
-    name VARCHAR(100) UNIQUE,
+    name VARCHAR(100),
     UNIQUE (country_id, name),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP

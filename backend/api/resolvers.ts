@@ -3,7 +3,7 @@
 import { id } from "zod/locales";
 import { prisma } from "../lib/prisma.ts";
 import { z } from "zod";
-import { publicProcedure } from "../api_auth/trpc.ts";
+// import { publicProcedure } from "../api_auth/trpc.ts";
 // import { publicProcedure } from '../api_auth/trpc';
 // import { occupation, relations } from '../generated/prisma/browser';
 import type {
@@ -13,6 +13,8 @@ import type {
   personUncheckedCreateInput,
   personUncheckedUpdateInput,
 } from "../generated/prisma/models/person";
+
+import { personDataBuilder } from "../utils/CreatePersonHelpers.ts";
 
 import type {
   genealogy_treeCreateInput,
@@ -58,26 +60,32 @@ export const resolvers = {
       }
     },
     // occupation
-    occupation: async (_parent: unknown, args: {id: string}) => {
+    occupation: async (_parent: unknown, args: { id: string }) => {
       try {
         const occupation = await prisma.occupation.findFirst({
-          where: {id: args.id}
+          where: { id: args.id },
         });
-        return occupation
+        return occupation;
       } catch (error: any) {
-        console.error("Error finding occupation by id", error)
+        console.error("Error finding occupation by id", error);
       }
     },
-    person_occupations: async (_parent: unknown, args: {personId: string}) => {
+    person_occupations: async (
+      _parent: unknown,
+      args: { personId: string },
+    ) => {
       try {
         const occupations = await prisma.person_occupations.findMany({
           where: {
-            person_id: args.personId
-          }
-        })
-        return occupations
+            person_id: args.personId,
+          },
+        });
+        return occupations;
       } catch (error: any) {
-        console.error(`Error finding occupations for person ${args.personId}`, error)
+        console.error(
+          `Error finding occupations for person ${args.personId}`,
+          error,
+        );
       }
     },
     occupations: async () => {
@@ -89,26 +97,29 @@ export const resolvers = {
       }
     },
     // education
-    education: async (_parent: unknown, args: {id: string}) => {
+    education: async (_parent: unknown, args: { id: string }) => {
       try {
         const education = await prisma.education.findFirst({
-          where: {id: args.id}
+          where: { id: args.id },
         });
-        return education
+        return education;
       } catch (error: any) {
-        console.error("Error finding education by id", error)
+        console.error("Error finding education by id", error);
       }
     },
-    person_educations: async (_parent: unknown, args: {personId: string}) => {
+    person_educations: async (_parent: unknown, args: { personId: string }) => {
       try {
         const educations = await prisma.person_educations.findMany({
           where: {
-            person_id: args.personId
-          }
-        })
-        return educations
+            person_id: args.personId,
+          },
+        });
+        return educations;
       } catch (error: any) {
-        console.error(`Error finding educations for person ${args.personId}`, error)
+        console.error(
+          `Error finding educations for person ${args.personId}`,
+          error,
+        );
       }
     },
     educations: async () => {
@@ -120,29 +131,35 @@ export const resolvers = {
       }
     },
     // residence
-    residence: async (_parent: unknown, args: {id: string}) => {
+    residence: async (_parent: unknown, args: { id: string }) => {
       try {
         const residence = await prisma.residence.findFirst({
-          where: {id: args.id}
+          where: { id: args.id },
         });
-        return residence
+        return residence;
       } catch (error: any) {
-        console.error("Error finding residence by id", error)
+        console.error("Error finding residence by id", error);
       }
     },
-    person_residences: async (_parent: unknown, args: {personId: string}) => {
+    person_residentials: async (
+      _parent: unknown,
+      args: { personId: string },
+    ) => {
       try {
         const residences = await prisma.person_residentials.findMany({
           where: {
-            person_id: args.personId
-          }
-        })
-        return residences
+            person_id: args.personId,
+          },
+        });
+        return residences;
       } catch (error: any) {
-        console.error(`Error finding residences for person ${args.personId}`, error)
+        console.error(
+          `Error finding residences for person ${args.personId}`,
+          error,
+        );
       }
     },
-    residences: async () => {
+    residentials: async () => {
       try {
         const residences = await prisma.residence.findMany();
         return residences;
@@ -155,9 +172,9 @@ export const resolvers = {
         const relations = await prisma.relations.findMany();
         return relations;
       } catch (error: any) {
-        console.error("Error finding all relationships", error)
+        console.error("Error finding all relationships", error);
       }
-    }
+    },
   },
   Mutation: {
     // CRUD персонажей
@@ -172,24 +189,36 @@ export const resolvers = {
       // context: { prisma: PrismaClient },
     ) => {
       try {
-        // const { prisma } = context;
+        const personBuilder = new personDataBuilder();
 
-        const newPerson = await prisma.$transaction(async (tx) => {
-          // const mother_input = args.mother_input;
-          // const mother = await tx.person.create({
-          //   data: {
-          //     ...mother_input, // ТРИ точки, а не две
-          //   },
-          // });
-        });
+        const transactionCreatePerson = await prisma.$transaction(
+          async (tx) => {
+            console.log("🚀 [TRANSACTION] START");
 
-        const Person = await prisma.person.create({
-          data: {
-            ...args.input,
+            const data = await personBuilder.buildData(tx, args.input);
+
+            // Проверяем, что обязательные поля есть
+            if (!data.firstname) {
+              throw new Error("Firstname is required");
+            }
+
+            console.log("📊 [TRANSACTION] Creating person with data:", {
+              firstname: data.firstname,
+              hasSurname: !!data.surname,
+              hasBirthPlace: !!data.birth_place,
+              hasDeathPlace: !!data.death_place,
+            });
+
+            const newPerson = await tx.person.create({
+              data,
+            });
+
+            console.log("✅ [TRANSACTION] Person created:", newPerson.id);
+            return newPerson;
           },
-        });
+        );
 
-        return Person;
+        return transactionCreatePerson;
       } catch (error: any) {
         console.error("Error creating person:", error);
         throw new Error(`Failed to create person: ${error.message}`);

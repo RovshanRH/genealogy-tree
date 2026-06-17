@@ -1,25 +1,23 @@
 type Surname {
   id: ID!
-  value: String!
-
-  createdAt: String!
-  updatedAt: String!
+  name: String!
+  created_at: String!
+  updated_at: String!
 }
 
 input SurnameInput {
-  value: String!
+  name: String!
 }
 
 input MaidenSurnameInput {
-  value: String!
+  name: String!
 }
 
 type Country {
   id: ID!
   name: String!
-
-  createdAt: String!
-  updatedAt: String!
+  created_at: String!
+  updated_at: String!
 }
 
 input CountryInput {
@@ -30,9 +28,8 @@ type Region {
   id: ID!
   name: String!
   country: Country!
-
-  createdAt: String!
-  updatedAt: String!
+  created_at: String!
+  updated_at: String!
 }
 
 input RegionInput {
@@ -44,75 +41,71 @@ type City {
   id: ID!
   name: String!
   region: Region!
-
-  createdAt: String!
-  updatedAt: String!
+  created_at: String!
+  updated_at: String!
 }
 
 input CityInput {
   name: String!
-  region: RegionInput!
+  region: RegionInput
 }
 
 type Street {
   id: ID!
   name: String!
   city: City!
-
-  createdAt: String!
-  updatedAt: String!
+  created_at: String!
+  updated_at: String!
 }
 
 input StreetInput {
   name: String!
-  city: CityInput!
+  city: CityInput
 }
 
 type House {
   id: ID!
   street: Street!
   name: String!
-
-  createdAt: String!
-  updatedAt: String!
+  created_at: String!
+  updated_at: String!
 }
 
 input HouseInput {
-  street: StreetInput!
   name: String!
+  street: StreetInput
 }
 
 type Apartment {
   id: ID!
   house: House!
   name: String!
-
-  createdAt: String!
-  updatedAt: String!
+  created_at: String!
+  updated_at: String!
 }
 
 input ApartmentInput {
-  house: HouseInput!
   name: String!
+  house: HouseInput
 }
 
 type Residence {
   id: ID!
-  personId: ID!
+  person_id: ID!
 
-  country: Country!
-  city: City!
-  street: Street!
-  house: House!
-  apartment: Apartment!
+  country: Country
+  city: City
+  street: Street
+  house: House
+  apartment: Apartment
 
   start_date: String!
   end_date: String!
   start_date_approx: Boolean
   end_date_approx: Boolean
 
-  createdAt: String!
-  updatedAt: String!
+  created_at: String!
+  updated_at: String!
 }
 
 input ResidenceInput {
@@ -124,8 +117,8 @@ input ResidenceInput {
   house: HouseInput
   apartment: ApartmentInput
 
-  start_date: String
-  end_date: String
+  start_date: String!
+  end_date: String!
   start_date_approx: Boolean
   end_date_approx: Boolean
 }
@@ -133,9 +126,8 @@ input ResidenceInput {
 type Nationality {
   id: ID!
   name: String!
-
-  createdAt: String!
-  updatedAt: String!
+  created_at: String!
+  updated_at: String!
 }
 
 input NationalityInput {
@@ -146,9 +138,8 @@ type SocialStatus {
   id: ID!
   name: String!
   description: String
-
-  createdAt: String!
-  updatedAt: String!
+  created_at: String!
+  updated_at: String!
 }
 
 input SocialStatusInput {
@@ -158,15 +149,15 @@ input SocialStatusInput {
 
 type Occupation {
   id: ID!
-  personId: ID!
+  person_id: ID!
 
   title: String!
   organization: String
-  startYear: String
-  endYear: String
+  start_year: String
+  end_year: String
 
-  createdAt: String!
-  updatedAt: String!
+  created_at: String!
+  updated_at: String!
 }
 
 input OccupationInput {
@@ -179,11 +170,11 @@ input OccupationInput {
 
 type Education {
   id: ID!
-  personId: ID!
+  person_id: ID!
   institution: String
-  specialty: String
-  yearStart: String
-  yearEnd: String
+  specialty: String!
+  year_start: String
+  year_end: String
 
   created_at: String
   updated_at: String
@@ -193,12 +184,10 @@ input EducationInput {
   personId: ID!
   institution: String
   degree: String
-  specialty: String
+  specialty: String!
   yearStart: String
   yearEnd: String
 }
-
-# ========== АДРЕСНЫЕ ТИПЫ (ДЛЯ УДОБСТВА КЛИЕНТА) ==========
 
 type BirthPlace {
   country: Country
@@ -207,10 +196,10 @@ type BirthPlace {
   street: Street
   house: House
   apartment: Apartment
-  fullAddress: String
+  full_address: String
 
-  birthDate: String
-  birthDateApprox: Boolean!
+  birth_date: String
+  birth_date_approx: Boolean
 }
 
 input BirthPlaceInput {
@@ -221,18 +210,18 @@ input BirthPlaceInput {
   house: HouseInput
   apartment: ApartmentInput
 
-  birthDate: String
-  birthDateApprox: Boolean!
+  birth_date: String
+  birth_date_approx: Boolean
 }
 
 type DeathPlace {
   country: Country
   region: Region
   city: City
-  fullAddress: String
+  full_address: String
 
-  deathDate: String
-  deathDateApprox: Boolean!
+  death_date: String
+  death_date_approx: Boolean
 }
 
 input DeathPlaceInput {
@@ -240,8 +229,8 @@ input DeathPlaceInput {
   region: RegionInput
   city: CityInput
 
-  deathDate: String
-  deathDateApprox: Boolean!
+  death_date: String
+  death_date_approx: Boolean
 }
 
 enum Gender {
@@ -251,7 +240,7 @@ enum Gender {
 
 type Person {
   id: ID!
-  genealogyTreeId: ID!
+  genealogy_tree_id: ID!
 
   mother: Person
   father: Person
@@ -261,40 +250,42 @@ type Person {
 
   # Основные данные
   surname: Surname!
-  maidenSurname: Surname
-  firstName: String!
+  maidensurname: Surname
+  firstname: String!
   patronymic: String!
   gender: Gender
   age: Int
 
-  fullName: String
-  residence: [Residence]
+  fullname: String
+  residence: [Residence]!
 
-  fullAddress: [String]
-  cityAddress: [String]
+  fulladdress: [String]
+  cityaddress: [String]
 
-  birthPlace: BirthPlace!
-  deathPlace: DeathPlace
+  birth_place: BirthPlace!
+  death_place: DeathPlace
 
   # Характеристики
   nationality: Nationality
-  socialStatus: SocialStatus
+  social_status: SocialStatus
   occupation: [Occupation]
   education: [Education]
 
   # Био и источники
   bio: String
-  sourceInfo: String
-  isPersonContacted: Boolean
-  isAlive: Boolean
+  source_info: String
+  ispersoncontacted: Boolean
+  isalive: Boolean
 
   # Метаданные
-  createdAt: String!
-  updatedAt: String!
+  created_at: String!
+  updated_at: String!
 }
 
 # поменять схему инпута, нужно связать с остальными типами
 input CreatePersonInput {
+  genealogy_tree_id: ID!
+
   mother: CreatePersonInput
   father: CreatePersonInput
   spouse: CreatePersonInput
@@ -303,28 +294,28 @@ input CreatePersonInput {
 
   # Основные данные
   surname: SurnameInput!
-  maidenSurname: SurnameInput
-  firstName: String!
+  maidensurname: SurnameInput
+  firstname: String!
   patronymic: String!
   gender: Gender
   age: Int
 
   # residence: [ResidenceInput]
 
-  birthPlace: BirthPlaceInput!
-  deathPlace: DeathPlaceInput
+  birth_place: BirthPlaceInput!
+  death_place: DeathPlaceInput
 
   # Характеристики
   nationality: NationalityInput
-  socialStatus: SocialStatusInput
+  social_status: SocialStatusInput
   # occupation: [OccupationInput]
   # education: [EducationInput]
 
   # Био и источники
   bio: String
-  sourceInfo: String
-  isPersonContacted: Boolean
-  isAlive: Boolean
+  source_info: String
+  ispersoncontacted: Boolean
+  isalive: Boolean
 }
 
 input UpdatePersonInput {
@@ -336,38 +327,37 @@ input UpdatePersonInput {
 
   # Основные данные
   surname: SurnameInput!
-  maidenSurname: SurnameInput
-  firstName: String!
+  maidensurname: SurnameInput
+  firstname: String!
   patronymic: String!
   gender: Gender
   age: Int
 
   # residence: [ResidenceInput]
 
-  birthPlace: BirthPlaceInput!
-  deathPlace: DeathPlaceInput
+  birth_place: BirthPlaceInput!
+  death_place: DeathPlaceInput
 
   # Характеристики
   nationality: NationalityInput
-  socialStatus: SocialStatusInput
+  social_status: SocialStatusInput
   # occupation: [OccupationInput]
   # education: [EducationInput]
 
   # Био и источники
   bio: String
-  sourceInfo: String
-  isPersonContacted: Boolean
-  isAlive: Boolean
+  source_info: String
+  ispersoncontacted: Boolean
+  isalive: Boolean
 }
-
 
 type Relation {
   fatherId: ID
   motherId: ID
   childId: ID!
   spouseID: ID
-  createdAt: String!
-  updatedAt: String!
+  created_at: String!
+  updated_at: String!
 }
 
 type GenealogyTree {
@@ -387,7 +377,6 @@ type GenealogyTree {
 input GenealogyTreeInput {
   name: String!
 }
-
 
 # query и mutations
 type Query {
@@ -423,7 +412,7 @@ type Mutation {
   updateOccupation(input: OccupationInput!): Occupation!
   deleteOccupation(id: ID!): Occupation!
 
-  # Education 
+  # Education
   createEducation(input: EducationInput!): Education!
   updateEducation(input: EducationInput!): Education!
   deleteEducation(id: ID!): Education!
@@ -433,7 +422,7 @@ type Mutation {
   updateResidence(input: ResidenceInput!): Residence!
   deleteResidence(id: ID!): Residence!
 
-  # Tree 
+  # Tree
   createTree(input: GenealogyTreeInput!): GenealogyTree!
   updateTree(id: ID!, input: GenealogyTreeInput!): GenealogyTree!
   deleteTree(id: ID!): GenealogyTree!
