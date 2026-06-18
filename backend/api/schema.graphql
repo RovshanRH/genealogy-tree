@@ -157,30 +157,23 @@ input DeathPlaceInput {
 
 type Residence {
   id: ID!
-  # FK-поля как UUID
-  country: ID
-  city: ID
-  street: ID
-  house: ID
-  apartment: ID
-  # Вложенные объекты
-  country_obj: Country
-  city_obj: City
-  street_obj: Street
-  house_obj: House
-  apartment_obj: Apartment
+  country: Country
+  city: City
+  street: Street
+  house: House
+  apartment: Apartment
 
-  created_at: String
-  updated_at: String
+  start_date: String
+  end_date: String
+  start_date_approx: Boolean
+  end_date_approx: Boolean
 }
 
 # person_residentials — связующая таблица person ↔ residence
 type PersonResidential {
   id: ID!
-  person_id: ID
-  residence_id: ID
+  person: Person
   residence: Residence
-
   start_date: String
   end_date: String
   start_date_approx: Boolean
@@ -194,18 +187,21 @@ input ResidenceInput {
   street: StreetInput
   house: HouseInput
   apartment: ApartmentInput
-}
-
-input PersonResidentialInput {
-  person_id: ID!
-  residence_id: ID          # передать ID существующего, или заполнить residence_input
-  residence_input: ResidenceInput
 
   start_date: String
   end_date: String
   start_date_approx: Boolean
   end_date_approx: Boolean
-  is_current: Boolean
+}
+
+input PersonResidentialInput {
+  personId: ID!
+  residenceId: ID!
+  startDate: String
+  endDate: String
+  startDateApprox: Boolean
+  endDateApprox: Boolean
+  isCurrent: Boolean
 }
 
 # ===========================================================================
@@ -275,20 +271,26 @@ type Occupation {
   updated_at: String
 }
 
+input OccupationInput {
+  title: String
+  organization: String
+}
+
 type PersonOccupation {
   id: ID!
-  person_id: ID
-  occupation_id: ID
-  occupation: Occupation
-
+  person: Person!
+  occupation: Occupation!
   start_date: String
   end_date: String
   is_primary: Boolean
 }
 
-input OccupationInput {
-  title: String!
-  organization: String
+input PersonOccupationInput {
+  personId: ID!
+  occupationId: ID!
+  startDate: String
+  endDate: String
+  isPrimary: Boolean
 }
 
 input PersonOccupationInput {
@@ -317,10 +319,8 @@ type Education {
 
 type PersonEducation {
   id: ID!
-  person_id: ID
-  education_id: ID
-  education: Education
-
+  person: Person!
+  education: Education!
   entry_year: Int
   graduation_year: Int
 }
@@ -332,12 +332,10 @@ input EducationInput {
 }
 
 input PersonEducationInput {
-  person_id: ID!
-  education_id: ID
-  education_input: EducationInput
-
-  entry_year: Int
-  graduation_year: Int
+  personId: ID!
+  educationId: ID!
+  entryYear: Int
+  graduationYear: Int
 }
 
 # ===========================================================================
@@ -618,12 +616,12 @@ type Mutation {
   addPersonEducation(input: PersonEducationInput!): PersonEducation!
   removePersonEducation(id: ID!): PersonEducation!
 
-  # Residence (справочник)
+  # Residence
   createResidence(input: ResidenceInput!): Residence!
   updateResidence(id: ID!, input: ResidenceInput!): Residence!
   deleteResidence(id: ID!): Residence!
 
-  # Привязка места жительства к персонажу
-  addPersonResidential(input: PersonResidentialInput!): PersonResidential!
-  removePersonResidential(id: ID!): PersonResidential!
+  # Привязка места жительства к человеку
+  addPersonResidence(input: PersonResidentialInput!): PersonResidential!
+  removePersonResidence(id: ID!): PersonResidential!
 }

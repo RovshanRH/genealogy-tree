@@ -478,7 +478,74 @@ async function getPersonWithRelations(personId: string) {
     },
   });
 }
+async function getFullPersonWithNiceFields(tx: any, personId: string) {
+  const raw = await tx.person.findUnique({
+    where: { id: personId },
+    include: {
+      surname_person_surnameTosurname: true,
+      maiden_surname: true,
+      nationality_person_nationalityTonationality: true,
+      social_status: true,
 
+      person_person_motherToperson: {
+        include: { surname_person_surnameTosurname: true },
+      },
+      person_person_fatherToperson: {
+        include: { surname_person_surnameTosurname: true },
+      },
+      person_person_spouseToperson: {
+        include: { surname_person_surnameTosurname: true },
+      },
+
+      birth_place_person_birth_placeTobirth_place: {
+        include: {
+          country: true,
+          city: { include: { region: true } },
+          street: true,
+          house: true,
+          apartment: { include: { house: true } },
+        },
+      },
+
+      death_place_person_death_placeTodeath_place: {
+        include: {
+          country: true,
+          city: true,
+        },
+      },
+
+      genealogy_tree: true,
+    },
+  });
+
+  if (!raw) return null;
+
+  return {
+    ...raw,
+    surname_obj: raw.surname_person_surnameTosurname,
+    maidensurname_obj: raw.maiden_surname,
+    nationality_obj: raw.nationality_person_nationalityTonationality,
+    social_status_obj: raw.social_status,
+
+    mother_obj: raw.person_person_motherToperson,
+    father_obj: raw.person_person_fatherToperson,
+    spouse_obj: raw.person_person_spouseToperson,
+
+    birth_place_obj: raw.birth_place_person_birth_placeTobirth_place,
+    death_place_obj: raw.death_place_person_death_placeTodeath_place,
+
+    // Убираем длинные Prisma-имена
+    surname_person_surnameTosurname: undefined,
+    maiden_surname: undefined,
+    nationality_person_nationalityTonationality: undefined,
+    social_status: undefined,
+    person_person_motherToperson: undefined,
+    person_person_fatherToperson: undefined,
+    person_person_spouseToperson: undefined,
+    birth_place_person_birth_placeTobirth_place: undefined,
+    death_place_person_death_placeTodeath_place: undefined,
+  };
+}
 // ---------------------------------------------------------------------------
 // Резольверы
 // ---------------------------------------------------------------------------
@@ -536,89 +603,61 @@ export const resolvers = {
 
     // --- Профессии ---
     occupation: async (_: unknown, args: { id: string }) => {
-      try {
-        return await prisma.occupation.findFirst({ where: { id: args.id } });
-      } catch (error: any) {
-        console.error("Error finding occupation", error);
-        throw new Error(`Failed to find occupation: ${error.message}`);
-      }
+      return prisma.occupation.findUnique({
+        where: { id: args.id },
+        include: { person_occupations: true },
+      });
     },
-    occupations: async () => {
-      try {
-        return await prisma.occupation.findMany();
-      } catch (error: any) {
-        console.error("Error finding occupations", error);
-        throw new Error(`Failed to find occupations: ${error.message}`);
-      }
-    },
-    person_occupations: async (_: unknown, args: { personId: string }) => {
-      try {
-        return await prisma.person_occupations.findMany({
-          where: { person_id: args.personId },
-          // include: { occupation: true },
-        });
-      } catch (error: any) {
-        console.error("Error finding person occupations", error);
-        throw new Error(`Failed to find person occupations: ${error.message}`);
-      }
+    occupations: async () => prisma.occupation.findMany({ include: { person_occupations: true } }),
+    person_occupations: async (_: unknown, args: { person_id: string }) => {
+      return prisma.person_occupations.findMany({
+        where: { person_id: args.person_id },
+        include: { occupation: true, person: true },
+      });
     },
 
     // --- Образование ---
     education: async (_: unknown, args: { id: string }) => {
-      try {
-        return await prisma.education.findFirst({ where: { id: args.id } });
-      } catch (error: any) {
-        console.error("Error finding education", error);
-        throw new Error(`Failed to find education: ${error.message}`);
-      }
+      return prisma.education.findUnique({
+        where: { id: args.id },
+        include: { person_educations: true },
+      });
     },
-    educations: async () => {
-      try {
-        return await prisma.education.findMany();
-      } catch (error: any) {
-        console.error("Error finding educations", error);
-        throw new Error(`Failed to find educations: ${error.message}`);
-      }
-    },
-    person_educations: async (_: unknown, args: { personId: string }) => {
-      try {
-        return await prisma.person_educations.findMany({
-          where: { person_id: args.personId },
-          // include: { education: true },
-        });
-      } catch (error: any) {
-        console.error("Error finding person educations", error);
-        throw new Error(`Failed to find person educations: ${error.message}`);
-      }
+    educations: async () => prisma.education.findMany({ include: { person_educations: true } }),
+    person_educations: async (_: unknown, args: { person_id: string }) => {
+      return prisma.person_educations.findMany({
+        where: { person_id: args.person_id },
+        include: { education: true, person: true },
+      });
     },
 
     // --- Места жительства ---
     residence: async (_: unknown, args: { id: string }) => {
-      try {
-        return await prisma.residence.findFirst({ where: { id: args.id } });
-      } catch (error: any) {
-        console.error("Error finding residence", error);
-        throw new Error(`Failed to find residence: ${error.message}`);
-      }
+      return prisma.residence.findUnique({
+        where: { id: args.id },
+        include: {
+          country_residence_countryTocountry: true,
+          city_residence_cityTocity: { include: { region: true } },
+          street_residence_streetTostreet: true,
+          house_residence_houseTohouse: true,
+          apartment_residence_apartmentToapartment: true,
+        },
+      });
     },
-    residentials: async () => {
-      try {
-        return await prisma.residence.findMany();
-      } catch (error: any) {
-        console.error("Error finding residentials", error);
-        throw new Error(`Failed to find residentials: ${error.message}`);
-      }
-    },
-    person_residentials: async (_: unknown, args: { personId: string }) => {
-      try {
-        return await prisma.person_residentials.findMany({
-          where: { person_id: args.personId },
-          // include: { residence: true },
-        });
-      } catch (error: any) {
-        console.error("Error finding person residentials", error);
-        throw new Error(`Failed to find person residentials: ${error.message}`);
-      }
+    residentials: async () => prisma.residence.findMany({ /* include */ }),
+    person_residentials: async (_: unknown, args: { person_id: string }) => {
+      return prisma.person_residentials.findMany({
+        where: { person_id: args.person_id },
+        include: {
+          residence: {
+            include: {
+              country_residence_countryTocountry: true,
+              city_residence_cityTocity: { include: { region: true } },
+              // ... другие гео-поля
+            },
+          },
+        },
+      });
     },
 
     // --- Отношения ---
@@ -738,7 +777,8 @@ export const resolvers = {
           });
 
           console.log("🏁 [createPerson] transaction END");
-          return fullPerson;
+          // return fullPerson;
+          return getFullPersonWithNiceFields(tx, withAutoFields.id);
         });
 
         return newPerson;
@@ -773,6 +813,7 @@ export const resolvers = {
             args.spouseId !== undefined ? args.spouseId : oldPerson.spouse;
           const newMaritalStatus =
             (args.input as any).marital_status ?? oldPerson.marital_status;
+
           checkMaritalStatus(
             newSpouseId ?? null,
             newMaritalStatus as MaritalStatus,
@@ -807,6 +848,7 @@ export const resolvers = {
             updated.surname ?? null,
             updated.patronymic ?? null,
           );
+
           const withAutoFields = await tx.person.update({
             where: { id: updated.id },
             data: autoFields,
@@ -842,32 +884,8 @@ export const resolvers = {
             },
           );
 
-          // Возвращаем полный объект со связями
-          return tx.person.findUnique({
-            where: { id: withAutoFields.id },
-            include: {
-              surname_person_surnameTosurname: true,
-              maiden_surname: true,
-              nationality_person_nationalityTonationality: true,
-              social_status: true,
-              person_person_motherToperson: true,
-              person_person_fatherToperson: true,
-              person_person_spouseToperson: true,
-              birth_place_person_birth_placeTobirth_place: {
-                include: {
-                  country: true,
-                  city: true,
-                  street: true,
-                  house: true,
-                  apartment: true,
-                },
-              },
-              death_place_person_death_placeTodeath_place: {
-                include: { country: true, city: true },
-              },
-              genealogy_tree: true,
-            },
-          });
+          // ←←← ИСПРАВЛЕНИЕ: используем красивый вывод
+          return await getFullPersonWithNiceFields(tx, withAutoFields.id);
         });
 
         return updatedPerson;
@@ -948,6 +966,283 @@ export const resolvers = {
       } catch (error: any) {
         console.error("Error deleting tree", error);
         throw new Error(`Failed to delete tree: ${error.message}`);
+      }
+    },
+        // ====================== OCCUPATION ======================
+    createOccupation: async (_: unknown, args: { input: any }) => {
+      try {
+        return await prisma.occupation.create({
+          data: {
+            title: args.input.title,
+            organization: args.input.organization,
+            // personId не нужен здесь — это справочник
+          },
+          include: { person_occupations: true },
+        });
+      } catch (error: any) {
+        throw new Error(`Failed to create occupation: ${error.message}`);
+      }
+    },
+
+    updateOccupation: async (_: unknown, args: { id: string; input: any }) => {
+      try {
+        return await prisma.occupation.update({
+          where: { id: args.id },
+          data: {
+            title: args.input.title,
+            organization: args.input.organization,
+          },
+        });
+      } catch (error: any) {
+        throw new Error(`Failed to update occupation: ${error.message}`);
+      }
+    },
+
+    deleteOccupation: async (_: unknown, args: { id: string }) => {
+      try {
+        return await prisma.occupation.delete({ where: { id: args.id } });
+      } catch (error: any) {
+        throw new Error(`Failed to delete occupation: ${error.message}`);
+      }
+    },
+
+    // Привязка профессии к человеку
+    addPersonOccupation: async (_: unknown, args: { input: any }) => {
+      try {
+        return await prisma.person_occupations.create({
+          data: {
+            person_id: args.input.personId,
+            occupation_id: args.input.occupationId,
+            start_date: args.input.startDate ? new Date(args.input.startDate) : null,
+            end_date: args.input.endDate ? new Date(args.input.endDate) : null,
+            is_primary: args.input.isPrimary ?? false,
+          },
+          include: {
+            person: true,
+            occupation: true,
+          },
+        });
+      } catch (error: any) {
+        throw new Error(`Failed to add person occupation: ${error.message}`);
+      }
+    },
+
+    removePersonOccupation: async (_: unknown, args: { id: string }) => {
+      try {
+        return await prisma.person_occupations.delete({
+          where: { id: args.id },
+          include: { person: true, occupation: true },
+        });
+      } catch (error: any) {
+        throw new Error(`Failed to remove person occupation: ${error.message}`);
+      }
+    },
+
+    // ====================== EDUCATION ======================
+    createEducation: async (_: unknown, args: { input: any }) => {
+      try {
+        return await prisma.education.create({
+          data: {
+            institution: args.input.institution,
+            degree: args.input.degree,
+            specialty: args.input.specialty,
+          },
+        });
+      } catch (error: any) {
+        throw new Error(`Failed to create education: ${error.message}`);
+      }
+    },
+
+    updateEducation: async (_: unknown, args: { id: string; input: any }) => {
+      try {
+        return await prisma.education.update({
+          where: { id: args.id },
+          data: {
+            institution: args.input.institution,
+            degree: args.input.degree,
+            specialty: args.input.specialty,
+          },
+        });
+      } catch (error: any) {
+        throw new Error(`Failed to update education: ${error.message}`);
+      }
+    },
+
+    deleteEducation: async (_: unknown, args: { id: string }) => {
+      try {
+        return await prisma.education.delete({ where: { id: args.id } });
+      } catch (error: any) {
+        throw new Error(`Failed to delete education: ${error.message}`);
+      }
+    },
+
+    addPersonEducation: async (_: unknown, args: { input: any }) => {
+      try {
+        return await prisma.person_educations.create({
+          data: {
+            person_id: args.input.personId,
+            education_id: args.input.educationId,
+            entry_year: args.input.entryYear,
+            graduation_year: args.input.graduationYear,
+          },
+          include: {
+            person: true,
+            education: true,
+          },
+        });
+      } catch (error: any) {
+        throw new Error(`Failed to add person education: ${error.message}`);
+      }
+    },
+
+    removePersonEducation: async (_: unknown, args: { id: string }) => {
+      try {
+        return await prisma.person_educations.delete({
+          where: { id: args.id },
+          include: { person: true, education: true },
+        });
+      } catch (error: any) {
+        throw new Error(`Failed to remove person education: ${error.message}`);
+      }
+    },
+
+        // ====================== RESIDENCE ======================
+
+    // Создание самого места жительства (справочник)
+    createResidence: async (_: unknown, args: { input: any }) => {
+      try {
+        const residence = await prisma.$transaction(async (tx) => {
+          const input = args.input;
+
+          // Создаём/находим гео-объекты
+          const country = await new personDataBuilder().createOrFindCountry(tx, input.country);
+          const city = await new personDataBuilder().createOrFindCity(tx, input.city);
+          const street = await new personDataBuilder().createOrFindStreet(tx, input.street);
+          const house = await new personDataBuilder().createOrFindHouse(tx, input.house);
+          const apartment = await new personDataBuilder().createOrFindApartment(tx, input.apartment);
+
+          const newResidence = await tx.residence.create({
+            data: {
+              country: country?.id ?? null,
+              city: city?.id ?? null,
+              street: street?.id ?? null,
+              house: house?.id ?? null,
+              apartment: apartment?.id ?? null,
+
+              start_date: input.start_date ? new Date(input.start_date) : null,
+              end_date: input.end_date ? new Date(input.end_date) : null,
+              start_date_approx: input.start_date_approx ?? false,
+              end_date_approx: input.end_date_approx ?? false,
+            },
+          });
+
+          return await tx.residence.findUnique({
+            where: { id: newResidence.id },
+            include: {
+              country_residence_countryTocountry: true,
+              city_residence_cityTocity: { include: { region: true } },
+              street_residence_streetTostreet: true,
+              house_residence_houseTohouse: true,
+              apartment_residence_apartmentToapartment: true,
+            },
+          });
+        });
+
+        return residence;
+      } catch (error: any) {
+        console.error("[createResidence] ERROR:", error);
+        throw new Error(`Failed to create residence: ${error.message}`);
+      }
+    },
+
+    // Привязка места жительства к человеку (junction)
+    addPersonResidence: async (_: unknown, args: { input: any }) => {
+      try {
+        return await prisma.person_residentials.create({
+          data: {
+            person_id: args.input.personId,
+            residence_id: args.input.residenceId,
+            start_date: args.input.startDate ? new Date(args.input.startDate) : null,
+            end_date: args.input.endDate ? new Date(args.input.endDate) : null,
+            start_date_approx: args.input.startDateApprox ?? false,
+            end_date_approx: args.input.endDateApprox ?? false,
+            is_current: args.input.isCurrent ?? false,
+          },
+          include: {
+            person: true,
+            residence: {
+              include: {
+                country_residence_countryTocountry: true,
+                city_residence_cityTocity: { include: { region: true } },
+                street_residence_streetTostreet: true,
+                house_residence_houseTohouse: true,
+                apartment_residence_apartmentToapartment: true,
+              },
+            },
+          },
+        });
+      } catch (error: any) {
+        throw new Error(`Failed to add person residence: ${error.message}`);
+      }
+    },
+
+    // Удаление привязки места жительства у человека
+    removePersonResidence: async (_: unknown, args: { id: string }) => {
+      try {
+        return await prisma.person_residentials.delete({
+          where: { id: args.id },
+          include: {
+            person: true,
+            residence: {
+              include: {
+                country_residence_countryTocountry: true,
+                city_residence_cityTocity: { include: { region: true } },
+              },
+            },
+          },
+        });
+      } catch (error: any) {
+        throw new Error(`Failed to remove person residence: ${error.message}`);
+      }
+    },
+
+    // Обновление записи residence
+    updateResidence: async (_: unknown, args: { id: string; input: any }) => {
+      try {
+        return await prisma.residence.update({
+          where: { id: args.id },
+          data: {
+            country: args.input.country,
+            city: args.input.city,
+            street: args.input.street,
+            house: args.input.house,
+            apartment: args.input.apartment,
+            start_date: args.input.start_date ? new Date(args.input.start_date) : undefined,
+            end_date: args.input.end_date ? new Date(args.input.end_date) : undefined,
+            start_date_approx: args.input.start_date_approx,
+            end_date_approx: args.input.end_date_approx,
+          },
+          include: {
+            country_residence_countryTocountry: true,
+            city_residence_cityTocity: { include: { region: true } },
+            street_residence_streetTostreet: true,
+            house_residence_houseTohouse: true,
+            apartment_residence_apartmentToapartment: true,
+          },
+        });
+      } catch (error: any) {
+        throw new Error(`Failed to update residence: ${error.message}`);
+      }
+    },
+
+    // Удаление записи residence
+    deleteResidence: async (_: unknown, args: { id: string }) => {
+      try {
+        return await prisma.residence.delete({
+          where: { id: args.id },
+        });
+      } catch (error: any) {
+        throw new Error(`Failed to delete residence: ${error.message}`);
       }
     },
   },
