@@ -1,23 +1,12 @@
-type Surname {
-  id: ID!
-  name: String!
-  created_at: String!
-  updated_at: String!
-}
-
-input SurnameInput {
-  name: String!
-}
-
-input MaidenSurnameInput {
-  name: String!
-}
+# ===========================================================================
+# Географические справочники
+# ===========================================================================
 
 type Country {
   id: ID!
-  name: String!
-  created_at: String!
-  updated_at: String!
+  name: String
+  created_at: String
+  updated_at: String
 }
 
 input CountryInput {
@@ -26,23 +15,25 @@ input CountryInput {
 
 type Region {
   id: ID!
-  name: String!
-  country: Country!
-  created_at: String!
-  updated_at: String!
+  name: String
+  country_id: ID          # FK → country.id
+  country: Country
+  created_at: String
+  updated_at: String
 }
 
 input RegionInput {
   name: String!
-  country: CountryInput!
+  country: CountryInput
 }
 
 type City {
   id: ID!
-  name: String!
-  region: Region!
-  created_at: String!
-  updated_at: String!
+  name: String
+  region_id: ID           # FK → region.id
+  region: Region
+  created_at: String
+  updated_at: String
 }
 
 input CityInput {
@@ -53,9 +44,10 @@ input CityInput {
 type Street {
   id: ID!
   name: String!
-  city: City!
-  created_at: String!
-  updated_at: String!
+  city_id: ID             # FK → city.id
+  city: City
+  created_at: String
+  updated_at: String
 }
 
 input StreetInput {
@@ -65,10 +57,11 @@ input StreetInput {
 
 type House {
   id: ID!
-  street: Street!
   name: String!
-  created_at: String!
-  updated_at: String!
+  street_id: ID           # FK → street.id
+  street: Street
+  created_at: String
+  updated_at: String
 }
 
 input HouseInput {
@@ -78,10 +71,11 @@ input HouseInput {
 
 type Apartment {
   id: ID!
-  house: House!
   name: String!
-  created_at: String!
-  updated_at: String!
+  house_id: ID            # FK → house.id
+  house: House
+  created_at: String
+  updated_at: String
 }
 
 input ApartmentInput {
@@ -89,45 +83,166 @@ input ApartmentInput {
   house: HouseInput
 }
 
-type Residence {
-  id: ID!
-  person_id: ID!
+# ===========================================================================
+# Место рождения (birth_place)
+# Prisma FK-поля: birth_place_country_id, birth_place_city_id,
+#                 birth_place_street, birth_place_house, birth_place_apartment
+# ===========================================================================
 
+type BirthPlace {
+  id: ID!
+  birth_date: String
+  birth_date_approx: Boolean
+
+  birth_place_country_id: ID
+  birth_place_city_id: ID
+  birth_place_street: ID
+  birth_place_house: ID
+  birth_place_apartment: ID
+
+  # Вложенные объекты (через relations в Prisma)
   country: Country
   city: City
   street: Street
   house: House
   apartment: Apartment
 
-  start_date: String!
-  end_date: String!
-  start_date_approx: Boolean
-  end_date_approx: Boolean
-
-  created_at: String!
-  updated_at: String!
+  created_at: String
+  updated_at: String
 }
 
-input ResidenceInput {
-  personId: ID!
+input BirthPlaceInput {
+  birth_date: String
+  birth_date_approx: Boolean
 
   country: CountryInput
   city: CityInput
   street: StreetInput
   house: HouseInput
   apartment: ApartmentInput
+}
 
-  start_date: String!
-  end_date: String!
+# ===========================================================================
+# Место смерти (death_place)
+# Prisma FK-поля: death_place_country_id, death_place_city_id
+# ===========================================================================
+
+type DeathPlace {
+  id: ID!
+  death_date: String
+  death_date_approx: Boolean
+
+  death_place_country_id: ID
+  death_place_city_id: ID
+
+  country: Country
+  city: City
+
+  created_at: String
+  updated_at: String
+}
+
+input DeathPlaceInput {
+  death_date: String
+  death_date_approx: Boolean
+
+  country: CountryInput
+  city: CityInput
+}
+
+# ===========================================================================
+# Место жительства (residence)
+# Prisma FK-поля: country, city, street, house, apartment (просто UUID)
+# ===========================================================================
+
+type Residence {
+  id: ID!
+  # FK-поля как UUID
+  country: ID
+  city: ID
+  street: ID
+  house: ID
+  apartment: ID
+  # Вложенные объекты
+  country_obj: Country
+  city_obj: City
+  street_obj: Street
+  house_obj: House
+  apartment_obj: Apartment
+
+  created_at: String
+  updated_at: String
+}
+
+# person_residentials — связующая таблица person ↔ residence
+type PersonResidential {
+  id: ID!
+  person_id: ID
+  residence_id: ID
+  residence: Residence
+
+  start_date: String
+  end_date: String
   start_date_approx: Boolean
   end_date_approx: Boolean
+  is_current: Boolean
 }
+
+input ResidenceInput {
+  country: CountryInput
+  city: CityInput
+  street: StreetInput
+  house: HouseInput
+  apartment: ApartmentInput
+}
+
+input PersonResidentialInput {
+  person_id: ID!
+  residence_id: ID          # передать ID существующего, или заполнить residence_input
+  residence_input: ResidenceInput
+
+  start_date: String
+  end_date: String
+  start_date_approx: Boolean
+  end_date_approx: Boolean
+  is_current: Boolean
+}
+
+# ===========================================================================
+# Фамилии
+# ===========================================================================
+
+type Surname {
+  id: ID!
+  name: String
+  created_at: String
+  updated_at: String
+}
+
+input SurnameInput {
+  name: String!
+}
+
+type MaidenSurname {
+  id: ID!
+  name: String
+  created_at: String
+  updated_at: String
+}
+
+input MaidenSurnameInput {
+  name: String!
+}
+
+# ===========================================================================
+# Национальность / социальный статус
+# ===========================================================================
 
 type Nationality {
   id: ID!
-  name: String!
-  created_at: String!
-  updated_at: String!
+  name: String
+  created_at: String
+  updated_at: String
 }
 
 input NationalityInput {
@@ -136,10 +251,10 @@ input NationalityInput {
 
 type SocialStatus {
   id: ID!
-  name: String!
+  name: String
   description: String
-  created_at: String!
-  updated_at: String!
+  created_at: String
+  updated_at: String
 }
 
 input SocialStatusInput {
@@ -147,218 +262,281 @@ input SocialStatusInput {
   description: String
 }
 
+# ===========================================================================
+# Профессия (occupation)
+# person_occupations: id, person_id, occupation_id, start_date, end_date, is_primary
+# ===========================================================================
+
 type Occupation {
   id: ID!
-  person_id: ID!
-
-  title: String!
+  title: String
   organization: String
-  start_year: String
-  end_year: String
-
-  created_at: String!
-  updated_at: String!
-}
-
-input OccupationInput {
-  personId: ID!
-  title: String!
-  organization: String
-  startYear: String
-  endYear: String
-}
-
-type Education {
-  id: ID!
-  person_id: ID!
-  institution: String
-  specialty: String!
-  year_start: String
-  year_end: String
-
   created_at: String
   updated_at: String
 }
 
-input EducationInput {
-  personId: ID!
+type PersonOccupation {
+  id: ID!
+  person_id: ID
+  occupation_id: ID
+  occupation: Occupation
+
+  start_date: String
+  end_date: String
+  is_primary: Boolean
+}
+
+input OccupationInput {
+  title: String!
+  organization: String
+}
+
+input PersonOccupationInput {
+  person_id: ID!
+  occupation_id: ID         # ID существующей профессии
+  occupation_input: OccupationInput  # или создать новую
+
+  start_date: String
+  end_date: String
+  is_primary: Boolean
+}
+
+# ===========================================================================
+# Образование (education)
+# person_educations: id, person_id, education_id, entry_year, graduation_year
+# ===========================================================================
+
+type Education {
+  id: ID!
   institution: String
   degree: String
-  specialty: String!
-  yearStart: String
-  yearEnd: String
+  specialty: String
+  created_at: String
+  updated_at: String
 }
 
-type BirthPlace {
-  country: Country
-  region: Region
-  city: City
-  street: Street
-  house: House
-  apartment: Apartment
-  full_address: String
+type PersonEducation {
+  id: ID!
+  person_id: ID
+  education_id: ID
+  education: Education
 
-  birth_date: String
-  birth_date_approx: Boolean
+  entry_year: Int
+  graduation_year: Int
 }
 
-input BirthPlaceInput {
-  country: CountryInput
-  region: RegionInput
-  city: CityInput
-  street: StreetInput
-  house: HouseInput
-  apartment: ApartmentInput
-
-  birth_date: String
-  birth_date_approx: Boolean
+input EducationInput {
+  institution: String
+  degree: String
+  specialty: String
 }
 
-type DeathPlace {
-  country: Country
-  region: Region
-  city: City
-  full_address: String
+input PersonEducationInput {
+  person_id: ID!
+  education_id: ID
+  education_input: EducationInput
 
-  death_date: String
-  death_date_approx: Boolean
+  entry_year: Int
+  graduation_year: Int
 }
 
-input DeathPlaceInput {
-  country: CountryInput
-  region: RegionInput
-  city: CityInput
-
-  death_date: String
-  death_date_approx: Boolean
-}
+# ===========================================================================
+# Enums
+# ===========================================================================
 
 enum Gender {
   male
   female
 }
 
+enum MaritalStatus {
+  single
+  married
+  divorced
+  widowed
+}
+
+# ===========================================================================
+# Person
+# Prisma поля: id, genealogy_tree_id, mother, father, marital_status, spouse,
+#              surname, maidensurname, firstname, patronymic, fullname,
+#              age, gender, fulladdress, cityaddress, nationality, socialstatus,
+#              birth_place, death_place, bio, source_info,
+#              ispersoncontacted, isalive, created_at, updated_at
+# ===========================================================================
+
 type Person {
   id: ID!
-  genealogy_tree_id: ID!
+  genealogy_tree_id: ID
 
-  mother: Person
-  father: Person
-  spouse: Person
+  # FK как UUID (сырые поля из БД)
+  mother: ID
+  father: ID
+  spouse: ID
+  surname: ID
+  maidensurname: ID
+  nationality: ID
+  socialstatus: ID
+  birth_place: ID
+  death_place: ID
 
-  marital_status: String
+  # Вложенные объекты
+  mother_obj: Person
+  father_obj: Person
+  spouse_obj: Person
+  surname_obj: Surname
+  maidensurname_obj: MaidenSurname
+  nationality_obj: Nationality
+  social_status_obj: SocialStatus
+  birth_place_obj: BirthPlace
+  death_place_obj: DeathPlace
+  genealogy_tree: GenealogyTree
 
-  # Основные данные
-  surname: Surname!
-  maidensurname: Surname
   firstname: String!
-  patronymic: String!
-  gender: Gender
-  age: Int
-
+  patronymic: String
   fullname: String
-  residence: [Residence]!
+  age: Int
+  gender: Gender
+  marital_status: MaritalStatus
 
   fulladdress: [String]
   cityaddress: [String]
 
-  birth_place: BirthPlace!
-  death_place: DeathPlace
-
-  # Характеристики
-  nationality: Nationality
-  social_status: SocialStatus
-  occupation: [Occupation]
-  education: [Education]
-
-  # Био и источники
   bio: String
   source_info: String
   ispersoncontacted: Boolean
   isalive: Boolean
 
-  # Метаданные
-  created_at: String!
-  updated_at: String!
+  created_at: String
+  updated_at: String
 }
 
-# поменять схему инпута, нужно связать с остальными типами
+# Краткий Person для вложенных связей (без рекурсии)
+type PersonShort {
+  id: ID!
+  firstname: String!
+  patronymic: String
+  fullname: String
+  gender: Gender
+  isalive: Boolean
+  surname_obj: Surname
+  maidensurname_obj: MaidenSurname
+}
+
+# Person со всеми развёрнутыми связями — возвращается из personWithRelations
+type PersonWithRelations {
+  id: ID!
+  genealogy_tree: GenealogyTree
+
+  mother_obj: PersonShort
+  father_obj: PersonShort
+  spouse_obj: PersonShort
+  children_by_mother: [PersonShort]   # другие person где motherid = этот id
+  children_by_father: [PersonShort]   # другие person где fatherid = этот id
+
+  surname_obj: Surname
+  maidensurname_obj: MaidenSurname
+  nationality_obj: Nationality
+  social_status_obj: SocialStatus
+
+  firstname: String!
+  patronymic: String
+  fullname: String
+  age: Int
+  gender: Gender
+  marital_status: MaritalStatus
+
+  fulladdress: [String]
+  cityaddress: [String]
+
+  birth_place_obj: BirthPlace
+  death_place_obj: DeathPlace
+
+  bio: String
+  source_info: String
+  ispersoncontacted: Boolean
+  isalive: Boolean
+
+  created_at: String
+  updated_at: String
+}
+
+# ===========================================================================
+# Inputs для создания / обновления Person
+# ===========================================================================
+
 input CreatePersonInput {
   genealogy_tree_id: ID!
 
-  mother: CreatePersonInput
-  father: CreatePersonInput
-  spouse: CreatePersonInput
+  # Передавать ID уже существующих записей
+  mother_id: ID
+  father_id: ID
+  spouse_id: ID
 
-  marital_status: String
+  marital_status: MaritalStatus
 
-  # Основные данные
-  surname: SurnameInput!
-  maidensurname: SurnameInput
+  surname: SurnameInput
+  maidensurname: MaidenSurnameInput
   firstname: String!
-  patronymic: String!
+  patronymic: String
   gender: Gender
   age: Int
 
-  # residence: [ResidenceInput]
-
-  birth_place: BirthPlaceInput!
+  birth_place: BirthPlaceInput
   death_place: DeathPlaceInput
 
-  # Характеристики
   nationality: NationalityInput
   social_status: SocialStatusInput
-  # occupation: [OccupationInput]
-  # education: [EducationInput]
 
-  # Био и источники
   bio: String
   source_info: String
   ispersoncontacted: Boolean
-  isalive: Boolean
 }
 
 input UpdatePersonInput {
-  mother: CreatePersonInput
-  father: CreatePersonInput
-  spouse: CreatePersonInput
+  mother_id: ID
+  father_id: ID
+  spouse_id: ID
 
-  marital_status: String
+  marital_status: MaritalStatus
 
-  # Основные данные
-  surname: SurnameInput!
-  maidensurname: SurnameInput
-  firstname: String!
-  patronymic: String!
+  surname: SurnameInput
+  maidensurname: MaidenSurnameInput
+  firstname: String
+  patronymic: String
   gender: Gender
   age: Int
 
-  # residence: [ResidenceInput]
-
-  birth_place: BirthPlaceInput!
+  birth_place: BirthPlaceInput
   death_place: DeathPlaceInput
 
-  # Характеристики
   nationality: NationalityInput
   social_status: SocialStatusInput
-  # occupation: [OccupationInput]
-  # education: [EducationInput]
 
-  # Био и источники
   bio: String
   source_info: String
   ispersoncontacted: Boolean
-  isalive: Boolean
 }
 
+# ===========================================================================
+# Relations (таблица relations)
+# Prisma поля: id, fatherid, motherid, personid, spouseid, autonaming
+# ===========================================================================
+
 type Relation {
-  fatherId: ID
-  motherId: ID
-  childId: ID!
-  spouseID: ID
-  created_at: String!
-  updated_at: String!
+  id: ID!
+  fatherid: ID
+  motherid: ID
+  personid: ID
+  spouseid: ID
+  autonaming: String
+  created_at: String
+  updated_at: String
 }
+
+# ===========================================================================
+# GenealogyTree
+# ===========================================================================
 
 type GenealogyTree {
   id: ID!
@@ -370,60 +548,82 @@ type GenealogyTree {
   count_all_characters_parents: Int
   count_all_characters_male: Int
   count_all_characters_female: Int
-  created_at: String!
-  updated_at: String!
+  created_at: String
+  updated_at: String
 }
 
 input GenealogyTreeInput {
   name: String!
 }
 
-# query и mutations
+# ===========================================================================
+# Query & Mutation
+# ===========================================================================
+
 type Query {
   # Tree
   trees: [GenealogyTree]!
   tree(id: ID!): GenealogyTree
+
   # Person
   persons: [Person]!
   person(id: ID!): Person
-  # Characteristics
-  occupation(id: String!): Occupation
-  person_occupations(personId: ID!): [Occupation]
-  occupations: [Occupation]
-
-  education(id: String!): Education
-  person_educations(personId: ID!): [Education]
-  educations: [Education]
-
-  residence(id: String!): Residence
-  person_residentials(personId: ID!): [Residence]
-  residentials: [Residence]
-  # Relationships
-  relations: [Relation]!
-}
-type Mutation {
-  # Person
-  createPerson(input: CreatePersonInput!): Person!
-  updatePerson(id: ID!, input: CreatePersonInput!): Person!
-  deletePerson(id: ID!): Person!
+  personWithRelations(id: ID!): PersonWithRelations
 
   # Occupation
-  createOccupation(input: OccupationInput!): Occupation!
-  updateOccupation(input: OccupationInput!): Occupation!
-  deleteOccupation(id: ID!): Occupation!
+  occupation(id: ID!): Occupation
+  occupations: [Occupation]!
+  person_occupations(person_id: ID!): [PersonOccupation]!
 
   # Education
-  createEducation(input: EducationInput!): Education!
-  updateEducation(input: EducationInput!): Education!
-  deleteEducation(id: ID!): Education!
+  education(id: ID!): Education
+  educations: [Education]!
+  person_educations(person_id: ID!): [PersonEducation]!
 
   # Residence
-  createResidence(input: ResidenceInput!): Residence!
-  updateResidence(input: ResidenceInput!): Residence!
-  deleteResidence(id: ID!): Residence!
+  residence(id: ID!): Residence
+  residentials: [Residence]!
+  person_residentials(person_id: ID!): [PersonResidential]!
+
+  # Relations
+  relations: [Relation]!
+}
+
+type Mutation {
+  # Person
+  createPerson(input: CreatePersonInput!): PersonWithRelations!
+  updatePerson(id: ID!, input: UpdatePersonInput!): PersonWithRelations!
+  deletePerson(id: ID!): Person!
 
   # Tree
   createTree(input: GenealogyTreeInput!): GenealogyTree!
   updateTree(id: ID!, input: GenealogyTreeInput!): GenealogyTree!
-  deleteTree(id: ID!): GenealogyTree!
+  deleteTree(id: ID!): Boolean!
+
+  # Occupation (справочник)
+  createOccupation(input: OccupationInput!): Occupation!
+  updateOccupation(id: ID!, input: OccupationInput!): Occupation!
+  deleteOccupation(id: ID!): Occupation!
+
+  # Привязка профессии к персонажу
+  addPersonOccupation(input: PersonOccupationInput!): PersonOccupation!
+  removePersonOccupation(id: ID!): PersonOccupation!
+
+  # Education (справочник)
+  createEducation(input: EducationInput!): Education!
+  updateEducation(id: ID!, input: EducationInput!): Education!
+  deleteEducation(id: ID!): Education!
+
+  # Привязка образования к персонажу
+  addPersonEducation(input: PersonEducationInput!): PersonEducation!
+  removePersonEducation(id: ID!): PersonEducation!
+
+  # Residence (справочник)
+  createResidence(input: ResidenceInput!): Residence!
+  updateResidence(id: ID!, input: ResidenceInput!): Residence!
+  deleteResidence(id: ID!): Residence!
+
+  # Привязка места жительства к персонажу
+  addPersonResidential(input: PersonResidentialInput!): PersonResidential!
+  removePersonResidential(id: ID!): PersonResidential!
 }

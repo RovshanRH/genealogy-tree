@@ -1,251 +1,873 @@
-// TODO: рефакторинг мутаций. Добавить валидацию. Рефакторинг БД: везде по create_at и uodate_at. Поменять связи (место жительства и персонаж)
+// Триггерные функции перенесены из SQL в TypeScript:
+// 1. setAliveStatus       — isalive выставляется автоматически по наличию death_place
+// 2. checkMaritalStatus   — валидация совместимости spouse и marital_status
+// 3. autoFillingRows      — fullname, fulladdress, cityaddress считаются на лету
+// 4. relationCRUD         — запись в таблицу relations при INSERT / UPDATE / DELETE
+// 5. countCharacters      — счётчики в genealogy_tree
+//
+// НЕ перенесено: update_updated_at_column (остаётся на уровне БД)
 
-import { id } from "zod/locales";
 import { prisma } from "../lib/prisma.ts";
-import { z } from "zod";
-// import { publicProcedure } from "../api_auth/trpc.ts";
-// import { publicProcedure } from '../api_auth/trpc';
-// import { occupation, relations } from '../generated/prisma/browser';
+
 import type {
   personCreateInput,
-  personFindFirstArgs,
   personUpdateInput,
-  personUncheckedCreateInput,
-  personUncheckedUpdateInput,
 } from "../generated/prisma/models/person";
-
-import { personDataBuilder } from "../utils/CreatePersonHelpers.ts";
 
 import type {
   genealogy_treeCreateInput,
   genealogy_treeUpdateInput,
 } from "../generated/prisma/models/genealogy_tree.ts";
 
+import { personDataBuilder } from "../utils/CreatePersonHelpers.ts";
+
+// ---------------------------------------------------------------------------
+// Типы
+// ---------------------------------------------------------------------------
+
+type MaritalStatus = "single" | "divorced" | "married" | "widowed";
+type Gender = "male" | "female";
+
+interface PersonSnapshot {
+  id: string;
+  isalive: boolean | null;
+  gender: Gender;
+  mother: string | null;
+  father: string | null;
+  genealogy_tree_id: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Вспомогательные функции (бывшие триггеры)
+// ---------------------------------------------------------------------------
+
+/**
+ * [setAliveStatus]
+ * Аналог SQL-триггера: если есть death_place — человек НЕ жив, иначе — жив.
+ * (Логика в оригинальном SQL была инвертирована — здесь исправлено.)
+ */
+function computeIsAlive(deathPlaceId: string | null | undefined): boolean {
+  return deathPlaceId == null;
+}
+
+/**
+ * [checkMaritalStatus]
+ * Аналог SQL-триггера: проверяет совместимость spouse и marital_status.
+ * Бросает ошибку, если данные противоречивы.
+ */
+function checkMaritalStatus(
+  spouseId: string | null | undefined,
+  maritalStatus: MaritalStatus,
+): void {
+  if (
+    spouseId != null &&
+    (maritalStatus === "single" || maritalStatus === "divorced")
+  ) {
+    throw new Error(
+      `Супруг указан, но семейный статус "${maritalStatus}" несовместим с наличием супруга`,
+    );
+  }
+  if (
+    spouseId == null &&
+    (maritalStatus === "married" || maritalStatus === "widowed")
+  ) {
+    throw new Error(
+      `Супруг не указан, но семейный статус "${maritalStatus}" требует наличия супруга`,
+    );
+  }
+}
+
+/**
+ * [fullNameCreater]
+ * Аналог SQL-функции: собирает полное имя из частей.
+ */
+function buildFullName(
+  firstName: string,
+  surname: string | null | undefined,
+  patronymic: string | null | undefined,
+): string {
+  return [surname, firstName, patronymic].filter(Boolean).join(" ");
+}
+
+/**
+ * [fullAddressCreater / autoFillingRows]
+ * Аналог SQL-триггера: строит fulladdress и cityaddress по residence_id.
+ * Возвращает [fullAddress, cityAddress].
+ */
+async function buildAddressStrings(
+  tx: any,
+  residenceId: string,
+): Promise<[string, string]> {
+  const res = await tx.residence.findUnique({
+    where: { id: residenceId },
+    include: {
+      country_residence_countryTocountry: true,
+      city_residence_cityTocity: {
+        include: { region: true },
+      },
+      street_residence_streetTostreet: true,
+      house_residence_houseTohouse: true,
+      apartment_residence_apartmentToapartment: true,
+    },
+  });
+
+  if (!res) return ["", ""];
+
+  const parts = {
+    country: res.country_residence_countryTocountry?.name ?? null,
+    region: res.city_residence_cityTocity?.region?.name ?? null,
+    city: res.city_residence_cityTocity?.name ?? null,
+    street: res.street_residence_streetTostreet?.name ?? null,
+    house: res.house_residence_houseTohouse?.name ?? null,
+    apartment: res.apartment_residence_apartmentToapartment?.name ?? null,
+  };
+
+  const fullAddress = [
+    parts.country ? `Страна: ${parts.country}` : null,
+    parts.region ? `Регион: ${parts.region}` : null,
+    parts.city ? `г. ${parts.city}` : null,
+    parts.street ? `ул. ${parts.street}` : null,
+    parts.house,
+    parts.apartment,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  const cityAddress = [
+    parts.city ? `г. ${parts.city}` : null,
+    parts.street ? `ул. ${parts.street}` : null,
+    parts.house,
+    parts.apartment,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  return [fullAddress, cityAddress];
+}
+
+/**
+ * [autoFillingRows]
+ * Собирает fullname, fulladdress[], cityaddress[] для персонажа.
+ */
+async function buildAutoFilledFields(
+  tx: any,
+  personId: string,
+  firstName: string,
+  surnameId: string | null | undefined,
+  patronymic: string | null | undefined,
+): Promise<{
+  fullname: string;
+  fulladdress: string[];
+  cityaddress: string[];
+}> {
+  // Получаем фамилию
+  let surnameName: string | null = null;
+  if (surnameId) {
+    const surnameRecord = await tx.surname.findUnique({
+      where: { id: surnameId },
+    });
+    surnameName = surnameRecord?.name ?? null;
+  }
+
+  const fullname = buildFullName(firstName, surnameName, patronymic);
+
+  // Собираем адреса из person_residentials
+  const residentials = await tx.person_residentials.findMany({
+    where: { person_id: personId },
+    select: { residence_id: true },
+  });
+
+  const fulladdress: string[] = [];
+  const cityaddress: string[] = [];
+
+  for (const { residence_id } of residentials) {
+    if (!residence_id) continue;
+    const [full, city] = await buildAddressStrings(tx, residence_id);
+    if (full) fulladdress.push(full);
+    if (city) cityaddress.push(city);
+  }
+
+  return { fullname, fulladdress, cityaddress };
+}
+
+/**
+ * [relationCRUD] — INSERT
+ * Создаёт запись в таблице relations при добавлении персонажа.
+ */
+/**
+ * [relationCRUD] — INSERT / UPDATE
+ * Безопасная версия без upsert с null в composite unique key.
+ */
+async function insertRelation(
+  tx: any,
+  personId: string,
+  fatherId: string | null | undefined,
+  motherId: string | null | undefined,
+  spouseId: string | null | undefined,
+): Promise<void> {
+  const fatherid = fatherId ?? null;
+  const motherid = motherId ?? null;
+  const spouseid = spouseId ?? null;
+
+  // Ищем существующую запись
+  const existing = await tx.relations.findFirst({
+    where: {
+      personid: personId,
+      fatherid,
+      motherid,
+      spouseid,
+    },
+  });
+
+  const data = {
+    fatherid,
+    motherid,
+    personid: personId,
+    spouseid,
+  };
+
+  if (existing) {
+    // Обновляем
+    await tx.relations.update({
+      where: { id: existing.id },
+      data,
+    });
+  } else {
+    // Создаём
+    await tx.relations.create({ data });
+  }
+}
+
+/**
+ * [relationCRUD] — DELETE
+ * Удаляет запись из relations при удалении персонажа.
+ */
+async function deleteRelation(tx: any, personId: string): Promise<void> {
+  await tx.relations.deleteMany({
+    where: { personid: personId },
+  });
+}
+
+/**
+ * [countCharacters] — INCREMENT при INSERT
+ * Обновляет счётчики дерева при добавлении персонажа.
+ */
+async function incrementTreeCounters(
+  tx: any,
+  person: PersonSnapshot,
+): Promise<void> {
+  if (!person.genealogy_tree_id) return;
+
+  await tx.genealogy_tree.update({
+    where: { id: person.genealogy_tree_id },
+    data: {
+      count_all_characters: { increment: 1 },
+      ...(person.isalive
+        ? { count_all_characters_alive: { increment: 1 } }
+        : { count_all_characters_dead: { increment: 1 } }),
+      ...(person.gender === "male"
+        ? { count_all_characters_male: { increment: 1 } }
+        : { count_all_characters_female: { increment: 1 } }),
+      ...(person.mother != null
+        ? { count_all_characters_parents: { increment: 1 } }
+        : {}),
+      ...(person.father != null
+        ? { count_all_characters_parents: { increment: 1 } }
+        : {}),
+      ...(person.mother != null && person.father != null
+        ? { count_all_characters_kids: { increment: 1 } }
+        : {}),
+    },
+  });
+}
+
+/**
+ * [countCharacters] — DECREMENT при DELETE
+ * Обновляет счётчики дерева при удалении персонажа.
+ */
+async function decrementTreeCounters(
+  tx: any,
+  person: PersonSnapshot,
+): Promise<void> {
+  if (!person.genealogy_tree_id) return;
+
+  await tx.genealogy_tree.update({
+    where: { id: person.genealogy_tree_id },
+    data: {
+      count_all_characters: { decrement: 1 },
+      ...(person.isalive
+        ? { count_all_characters_alive: { decrement: 1 } }
+        : { count_all_characters_dead: { decrement: 1 } }),
+      ...(person.gender === "male"
+        ? { count_all_characters_male: { decrement: 1 } }
+        : { count_all_characters_female: { decrement: 1 } }),
+      ...(person.mother != null
+        ? { count_all_characters_parents: { decrement: 1 } }
+        : {}),
+      ...(person.father != null
+        ? { count_all_characters_parents: { decrement: 1 } }
+        : {}),
+      ...(person.mother != null && person.father != null
+        ? { count_all_characters_kids: { decrement: 1 } }
+        : {}),
+    },
+  });
+}
+
+/**
+ * [countCharacters] — UPDATE
+ * Пересчитывает счётчики дерева при обновлении персонажа (old → new).
+ */
+async function updateTreeCounters(
+  tx: any,
+  oldPerson: PersonSnapshot,
+  newPerson: PersonSnapshot,
+): Promise<void> {
+  const treeId = newPerson.genealogy_tree_id ?? oldPerson.genealogy_tree_id;
+  if (!treeId) return;
+
+  const delta: Record<string, number> = {};
+
+  // isAlive
+  if (oldPerson.isalive === true && newPerson.isalive === false) {
+    delta.count_all_characters_alive = -1;
+    delta.count_all_characters_dead = 1;
+  } else if (oldPerson.isalive === false && newPerson.isalive === true) {
+    delta.count_all_characters_alive = 1;
+    delta.count_all_characters_dead = -1;
+  }
+
+  // gender
+  if (oldPerson.gender === "male" && newPerson.gender === "female") {
+    delta.count_all_characters_male = -1;
+    delta.count_all_characters_female = 1;
+  } else if (oldPerson.gender === "female" && newPerson.gender === "male") {
+    delta.count_all_characters_male = 1;
+    delta.count_all_characters_female = -1;
+  }
+
+  // parents
+  if (oldPerson.mother == null && newPerson.mother != null)
+    delta.count_all_characters_parents =
+      (delta.count_all_characters_parents ?? 0) + 1;
+  if (oldPerson.father == null && newPerson.father != null)
+    delta.count_all_characters_parents =
+      (delta.count_all_characters_parents ?? 0) + 1;
+  if (oldPerson.mother != null && newPerson.mother == null)
+    delta.count_all_characters_parents =
+      (delta.count_all_characters_parents ?? 0) - 1;
+  if (oldPerson.father != null && newPerson.father == null)
+    delta.count_all_characters_parents =
+      (delta.count_all_characters_parents ?? 0) - 1;
+
+  // kids
+  const wasKid = oldPerson.mother != null && oldPerson.father != null;
+  const isKid = newPerson.mother != null && newPerson.father != null;
+  if (!wasKid && isKid) delta.count_all_characters_kids = 1;
+  if (wasKid && !isKid) delta.count_all_characters_kids = -1;
+
+  if (Object.keys(delta).length === 0) return;
+
+  // Prisma не поддерживает динамические increment/decrement в одном вызове,
+  // поэтому обновляем через $executeRaw или через отдельные вызовы.
+  // Безопаснее — читаем текущие значения и пишем новые.
+  const tree = await tx.genealogy_tree.findUnique({ where: { id: treeId } });
+  if (!tree) return;
+
+  await tx.genealogy_tree.update({
+    where: { id: treeId },
+    data: {
+      count_all_characters_alive: Math.max(
+        0,
+        (tree.count_all_characters_alive ?? 0) +
+          (delta.count_all_characters_alive ?? 0),
+      ),
+      count_all_characters_dead: Math.max(
+        0,
+        (tree.count_all_characters_dead ?? 0) +
+          (delta.count_all_characters_dead ?? 0),
+      ),
+      count_all_characters_male: Math.max(
+        0,
+        (tree.count_all_characters_male ?? 0) +
+          (delta.count_all_characters_male ?? 0),
+      ),
+      count_all_characters_female: Math.max(
+        0,
+        (tree.count_all_characters_female ?? 0) +
+          (delta.count_all_characters_female ?? 0),
+      ),
+      count_all_characters_parents: Math.max(
+        0,
+        (tree.count_all_characters_parents ?? 0) +
+          (delta.count_all_characters_parents ?? 0),
+      ),
+      count_all_characters_kids: Math.max(
+        0,
+        (tree.count_all_characters_kids ?? 0) +
+          (delta.count_all_characters_kids ?? 0),
+      ),
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Запрос JSON со всеми связями персонажа
+// ---------------------------------------------------------------------------
+
+/**
+ * Возвращает полный объект персонажа со всеми связями:
+ * - родители / супруг (вложенные объекты person)
+ * - профессии, образование, места жительства
+ * - место рождения / смерти с вложенной географией
+ * - запись в таблице relations
+ */
+async function getPersonWithRelations(personId: string) {
+  return prisma.person.findUnique({
+    where: { id: personId },
+    include: {
+      // Фамилия / девичья фамилия
+      surname_person_surnameTosurname: true,
+      maiden_surname: true,
+      // Национальность / соц. статус
+      nationality_person_nationalityTonationality: true,
+      social_status: true,
+      // Родители
+      person_person_motherToperson: {
+        include: {
+          surname_person_surnameTosurname: true,
+        },
+      },
+      person_person_fatherToperson: {
+        include: {
+          surname_person_surnameTosurname: true,
+        },
+      },
+      // Супруг
+      person_person_spouseToperson: {
+        include: {
+          surname_person_surnameTosurname: true,
+        },
+      },
+      // Дети (те, у кого этот человек — мать или отец)
+      other_person_person_motherToperson: {
+        include: { surname_person_surnameTosurname: true },
+      },
+      other_person_person_fatherToperson: {
+        include: { surname_person_surnameTosurname: true },
+      },
+      // Место рождения (с полной географией)
+      birth_place_person_birth_placeTobirth_place: {
+        include: {
+          country: true,
+          city: true,
+          street: true,
+          house: true,
+          apartment: true,
+        },
+      },
+      // Место смерти
+      death_place_person_death_placeTodeath_place: {
+        include: {
+          country: true,
+          city: true,
+        },
+      },
+      // Дерево
+      genealogy_tree: true,
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Резольверы
+// ---------------------------------------------------------------------------
+
 export const resolvers = {
   Query: {
+    // --- Деревья ---
     trees: async () => {
       try {
-        const genealogy_trees = await prisma?.genealogy_tree.findMany();
-        return genealogy_trees;
+        return await prisma.genealogy_tree.findMany();
       } catch (error: any) {
         console.error("Error finding trees", error);
+        throw new Error(`Failed to find trees: ${error.message}`);
       }
     },
-    tree: async (_parent: unknown, args: { id: string }) => {
+    tree: async (_: unknown, args: { id: string }) => {
       try {
-        const genealogy_tree = await prisma?.genealogy_tree.findFirst({
+        return await prisma.genealogy_tree.findFirst({
           where: { id: args.id },
         });
-        return genealogy_tree;
       } catch (error: any) {
         console.error("Error finding tree", error);
+        throw new Error(`Failed to find tree: ${error.message}`);
       }
     },
+
+    // --- Персонажи ---
     persons: async () => {
       try {
-        const people = await prisma?.person.findMany();
-        return people;
+        return await prisma.person.findMany();
       } catch (error: any) {
-        console.error("Error finding people", error);
+        console.error("Error finding persons", error);
+        throw new Error(`Failed to find persons: ${error.message}`);
       }
     },
-    person: async (_parent: unknown, args: { id: string }) => {
+    person: async (_: unknown, args: { id: string }) => {
       try {
-        const person = await prisma?.person.findFirst({
-          where: { id: args.id },
-        });
-        return person;
+        return await prisma.person.findFirst({ where: { id: args.id } });
       } catch (error: any) {
         console.error("Error finding person", error);
+        throw new Error(`Failed to find person: ${error.message}`);
       }
     },
-    // occupation
-    occupation: async (_parent: unknown, args: { id: string }) => {
+    // Возвращает персонажа со ВСЕМИ связями в виде JSON
+    personWithRelations: async (_: unknown, args: { id: string }) => {
       try {
-        const occupation = await prisma.occupation.findFirst({
-          where: { id: args.id },
-        });
-        return occupation;
+        return await getPersonWithRelations(args.id);
       } catch (error: any) {
-        console.error("Error finding occupation by id", error);
-      }
-    },
-    person_occupations: async (
-      _parent: unknown,
-      args: { personId: string },
-    ) => {
-      try {
-        const occupations = await prisma.person_occupations.findMany({
-          where: {
-            person_id: args.personId,
-          },
-        });
-        return occupations;
-      } catch (error: any) {
-        console.error(
-          `Error finding occupations for person ${args.personId}`,
-          error,
+        console.error("Error finding person with relations", error);
+        throw new Error(
+          `Failed to find person with relations: ${error.message}`,
         );
+      }
+    },
+
+    // --- Профессии ---
+    occupation: async (_: unknown, args: { id: string }) => {
+      try {
+        return await prisma.occupation.findFirst({ where: { id: args.id } });
+      } catch (error: any) {
+        console.error("Error finding occupation", error);
+        throw new Error(`Failed to find occupation: ${error.message}`);
       }
     },
     occupations: async () => {
       try {
-        const occupations = await prisma.occupation.findMany();
-        return occupations;
+        return await prisma.occupation.findMany();
       } catch (error: any) {
-        console.error("Error finding all occupations", error);
+        console.error("Error finding occupations", error);
+        throw new Error(`Failed to find occupations: ${error.message}`);
       }
     },
-    // education
-    education: async (_parent: unknown, args: { id: string }) => {
+    person_occupations: async (_: unknown, args: { personId: string }) => {
       try {
-        const education = await prisma.education.findFirst({
-          where: { id: args.id },
+        return await prisma.person_occupations.findMany({
+          where: { person_id: args.personId },
+          // include: { occupation: true },
         });
-        return education;
       } catch (error: any) {
-        console.error("Error finding education by id", error);
+        console.error("Error finding person occupations", error);
+        throw new Error(`Failed to find person occupations: ${error.message}`);
       }
     },
-    person_educations: async (_parent: unknown, args: { personId: string }) => {
+
+    // --- Образование ---
+    education: async (_: unknown, args: { id: string }) => {
       try {
-        const educations = await prisma.person_educations.findMany({
-          where: {
-            person_id: args.personId,
-          },
-        });
-        return educations;
+        return await prisma.education.findFirst({ where: { id: args.id } });
       } catch (error: any) {
-        console.error(
-          `Error finding educations for person ${args.personId}`,
-          error,
-        );
+        console.error("Error finding education", error);
+        throw new Error(`Failed to find education: ${error.message}`);
       }
     },
     educations: async () => {
       try {
-        const educations = await prisma.education.findMany();
-        return educations;
+        return await prisma.education.findMany();
       } catch (error: any) {
-        console.error("Error finding all educations", error);
+        console.error("Error finding educations", error);
+        throw new Error(`Failed to find educations: ${error.message}`);
       }
     },
-    // residence
-    residence: async (_parent: unknown, args: { id: string }) => {
+    person_educations: async (_: unknown, args: { personId: string }) => {
       try {
-        const residence = await prisma.residence.findFirst({
-          where: { id: args.id },
+        return await prisma.person_educations.findMany({
+          where: { person_id: args.personId },
+          // include: { education: true },
         });
-        return residence;
       } catch (error: any) {
-        console.error("Error finding residence by id", error);
+        console.error("Error finding person educations", error);
+        throw new Error(`Failed to find person educations: ${error.message}`);
       }
     },
-    person_residentials: async (
-      _parent: unknown,
-      args: { personId: string },
-    ) => {
+
+    // --- Места жительства ---
+    residence: async (_: unknown, args: { id: string }) => {
       try {
-        const residences = await prisma.person_residentials.findMany({
-          where: {
-            person_id: args.personId,
-          },
-        });
-        return residences;
+        return await prisma.residence.findFirst({ where: { id: args.id } });
       } catch (error: any) {
-        console.error(
-          `Error finding residences for person ${args.personId}`,
-          error,
-        );
+        console.error("Error finding residence", error);
+        throw new Error(`Failed to find residence: ${error.message}`);
       }
     },
     residentials: async () => {
       try {
-        const residences = await prisma.residence.findMany();
-        return residences;
+        return await prisma.residence.findMany();
       } catch (error: any) {
-        console.error("Error finding all residences", error);
+        console.error("Error finding residentials", error);
+        throw new Error(`Failed to find residentials: ${error.message}`);
       }
     },
+    person_residentials: async (_: unknown, args: { personId: string }) => {
+      try {
+        return await prisma.person_residentials.findMany({
+          where: { person_id: args.personId },
+          // include: { residence: true },
+        });
+      } catch (error: any) {
+        console.error("Error finding person residentials", error);
+        throw new Error(`Failed to find person residentials: ${error.message}`);
+      }
+    },
+
+    // --- Отношения ---
     relations: async () => {
       try {
-        const relations = await prisma.relations.findMany();
-        return relations;
+        return await prisma.relations.findMany();
       } catch (error: any) {
-        console.error("Error finding all relationships", error);
+        console.error("Error finding relations", error);
+        throw new Error(`Failed to find relations: ${error.message}`);
       }
     },
   },
+
   Mutation: {
-    // CRUD персонажей
+    // -------------------------------------------------------------------------
+    // createPerson
+    // -------------------------------------------------------------------------
     createPerson: async (
-      _parent: unknown,
+      _: unknown,
       args: {
         input: personCreateInput;
-        mother_input: personUncheckedCreateInput | null;
-        father_input: personUncheckedCreateInput | null;
-        spouse_input: personUncheckedCreateInput | null;
+        // Опциональные: передавать ID уже существующих записей
+        motherId?: string | null;
+        fatherId?: string | null;
+        spouseId?: string | null;
+        genealogyTreeId?: string | null;
       },
-      // context: { prisma: PrismaClient },
     ) => {
       try {
         const personBuilder = new personDataBuilder();
 
-        const transactionCreatePerson = await prisma.$transaction(
-          async (tx) => {
-            console.log("🚀 [TRANSACTION] START");
+        const newPerson = await prisma.$transaction(async (tx) => {
+          console.log("🚀 [createPerson] transaction START");
 
-            const data = await personBuilder.buildData(tx, args.input);
+          // 1. Собираем данные через builder (surname, nationality, birth_place и т.д.)
+          const data = await personBuilder.buildData(tx, args.input);
 
-            // Проверяем, что обязательные поля есть
-            if (!data.firstname) {
-              throw new Error("Firstname is required");
-            }
+          if (!data.firstname) throw new Error("Firstname is required");
 
-            console.log("📊 [TRANSACTION] Creating person with data:", {
-              firstname: data.firstname,
-              hasSurname: !!data.surname,
-              hasBirthPlace: !!data.birth_place,
-              hasDeathPlace: !!data.death_place,
-            });
+          // 2. Подставляем связи с деревом, родителями, супругом
+          if (args.genealogyTreeId)
+            data.genealogy_tree_id = args.genealogyTreeId;
+          if (args.motherId) data.mother = args.motherId;
+          if (args.fatherId) data.father = args.fatherId;
+          if (args.spouseId) data.spouse = args.spouseId;
 
-            const newPerson = await tx.person.create({
-              data,
-            });
+          // 3. [checkMaritalStatus] — валидация до записи
+          checkMaritalStatus(
+            data.spouse ?? null,
+            (data.marital_status ?? "single") as MaritalStatus,
+          );
 
-            console.log("✅ [TRANSACTION] Person created:", newPerson.id);
-            return newPerson;
-          },
-        );
+          // 4. [setAliveStatus] — вычисляем isalive
+          data.isalive = computeIsAlive(data.death_place ?? null);
 
-        return transactionCreatePerson;
+          // 5. Создаём персонажа
+          const created = await tx.person.create({ data });
+          console.log("✅ [createPerson] person created:", created.id);
+
+          // 6. [autoFillingRows] — fullname, адреса
+          const autoFields = await buildAutoFilledFields(
+            tx,
+            created.id,
+            created.firstname,
+            created.surname ?? null,
+            created.patronymic ?? null,
+          );
+          const withAutoFields = await tx.person.update({
+            where: { id: created.id },
+            data: autoFields,
+          });
+
+          // 7. [relationCRUD INSERT] — создаём запись в relations
+          await insertRelation(
+            tx,
+            withAutoFields.id,
+            withAutoFields.father,
+            withAutoFields.mother,
+            withAutoFields.spouse,
+          );
+
+          // 8. [countCharacters INSERT] — обновляем счётчики дерева
+          await incrementTreeCounters(tx, {
+            id: withAutoFields.id,
+            isalive: withAutoFields.isalive,
+            gender: withAutoFields.gender as Gender,
+            mother: withAutoFields.mother,
+            father: withAutoFields.father,
+            genealogy_tree_id: withAutoFields.genealogy_tree_id,
+          });
+
+          // 9. Возвращаем полный объект со всеми связями (JSON)
+          const fullPerson = await tx.person.findUnique({
+            where: { id: withAutoFields.id },
+            include: {
+              surname_person_surnameTosurname: true,
+              maiden_surname: true,
+              nationality_person_nationalityTonationality: true,
+              social_status: true,
+              person_person_motherToperson: true,
+              person_person_fatherToperson: true,
+              person_person_spouseToperson: true,
+              birth_place_person_birth_placeTobirth_place: {
+                include: {
+                  country: true,
+                  city: true,
+                  street: true,
+                  house: true,
+                  apartment: true,
+                },
+              },
+              death_place_person_death_placeTodeath_place: {
+                include: { country: true, city: true },
+              },
+              genealogy_tree: true,
+            },
+          });
+
+          console.log("🏁 [createPerson] transaction END");
+          return fullPerson;
+        });
+
+        return newPerson;
       } catch (error: any) {
         console.error("Error creating person:", error);
         throw new Error(`Failed to create person: ${error.message}`);
       }
     },
+
+    // -------------------------------------------------------------------------
+    // updatePerson
+    // -------------------------------------------------------------------------
     updatePerson: async (
-      _parent: unknown,
-      args: { input: personUpdateInput; id: string },
-      // context: { prisma: PrismaClient },
+      _: unknown,
+      args: {
+        id: string;
+        input: personUpdateInput;
+        motherId?: string | null;
+        fatherId?: string | null;
+        spouseId?: string | null;
+      },
     ) => {
       try {
-        // const { input } = args;
-        // const { prisma } = context;
-        const updated_at = new Date();
-        const selectedPerson = await prisma.person.findUnique({
-          where: { id: args.id },
-        });
-        if (!selectedPerson) {
-          throw new Error("Person not found");
-        }
+        const updatedPerson = await prisma.$transaction(async (tx) => {
+          const oldPerson = await tx.person.findUnique({
+            where: { id: args.id },
+          });
+          if (!oldPerson) throw new Error("Person not found");
 
-        const updatedPerson = prisma.person.update({
-          where: { id: selectedPerson.id },
-          data: {
+          // [checkMaritalStatus]
+          const newSpouseId =
+            args.spouseId !== undefined ? args.spouseId : oldPerson.spouse;
+          const newMaritalStatus =
+            (args.input as any).marital_status ?? oldPerson.marital_status;
+          checkMaritalStatus(
+            newSpouseId ?? null,
+            newMaritalStatus as MaritalStatus,
+          );
+
+          // [setAliveStatus]
+          const newDeathPlace =
+            (args.input as any).death_place !== undefined
+              ? (args.input as any).death_place
+              : oldPerson.death_place;
+          const isalive = computeIsAlive(newDeathPlace);
+
+          // Собираем данные обновления
+          const updateData: any = {
             ...args.input,
-            updated_at,
-          },
+            isalive,
+          };
+          if (args.motherId !== undefined) updateData.mother = args.motherId;
+          if (args.fatherId !== undefined) updateData.father = args.fatherId;
+          if (args.spouseId !== undefined) updateData.spouse = args.spouseId;
+
+          const updated = await tx.person.update({
+            where: { id: args.id },
+            data: updateData,
+          });
+
+          // [autoFillingRows]
+          const autoFields = await buildAutoFilledFields(
+            tx,
+            updated.id,
+            updated.firstname,
+            updated.surname ?? null,
+            updated.patronymic ?? null,
+          );
+          const withAutoFields = await tx.person.update({
+            where: { id: updated.id },
+            data: autoFields,
+          });
+
+          // [relationCRUD UPDATE]
+          await insertRelation(
+            tx,
+            withAutoFields.id,
+            withAutoFields.father,
+            withAutoFields.mother,
+            withAutoFields.spouse,
+          );
+
+          // [countCharacters UPDATE]
+          await updateTreeCounters(
+            tx,
+            {
+              id: oldPerson.id,
+              isalive: oldPerson.isalive,
+              gender: oldPerson.gender as Gender,
+              mother: oldPerson.mother,
+              father: oldPerson.father,
+              genealogy_tree_id: oldPerson.genealogy_tree_id,
+            },
+            {
+              id: withAutoFields.id,
+              isalive: withAutoFields.isalive,
+              gender: withAutoFields.gender as Gender,
+              mother: withAutoFields.mother,
+              father: withAutoFields.father,
+              genealogy_tree_id: withAutoFields.genealogy_tree_id,
+            },
+          );
+
+          // Возвращаем полный объект со связями
+          return tx.person.findUnique({
+            where: { id: withAutoFields.id },
+            include: {
+              surname_person_surnameTosurname: true,
+              maiden_surname: true,
+              nationality_person_nationalityTonationality: true,
+              social_status: true,
+              person_person_motherToperson: true,
+              person_person_fatherToperson: true,
+              person_person_spouseToperson: true,
+              birth_place_person_birth_placeTobirth_place: {
+                include: {
+                  country: true,
+                  city: true,
+                  street: true,
+                  house: true,
+                  apartment: true,
+                },
+              },
+              death_place_person_death_placeTodeath_place: {
+                include: { country: true, city: true },
+              },
+              genealogy_tree: true,
+            },
+          });
         });
 
         return updatedPerson;
@@ -254,78 +876,78 @@ export const resolvers = {
         throw new Error(`Failed to update person: ${error.message}`);
       }
     },
-    deletePerson: async (
-      _parent: unknown,
-      args: { id: string },
-      // context: { prisma: PrismaClient },
-    ) => {
+
+    // -------------------------------------------------------------------------
+    // deletePerson
+    // -------------------------------------------------------------------------
+    deletePerson: async (_: unknown, args: { id: string }) => {
       try {
-        // const { prisma } = context;
-        const deletedPerson = await prisma.person.delete({
-          where: { id: args.id },
+        return await prisma.$transaction(async (tx) => {
+          const person = await tx.person.findUnique({ where: { id: args.id } });
+          if (!person) throw new Error("Person not found");
+
+          // [relationCRUD DELETE]
+          await deleteRelation(tx, person.id);
+
+          const deleted = await tx.person.delete({ where: { id: args.id } });
+
+          // [countCharacters DELETE]
+          await decrementTreeCounters(tx, {
+            id: deleted.id,
+            isalive: deleted.isalive,
+            gender: deleted.gender as Gender,
+            mother: deleted.mother,
+            father: deleted.father,
+            genealogy_tree_id: deleted.genealogy_tree_id,
+          });
+
+          return deleted;
         });
-        return deletedPerson;
       } catch (error: any) {
-        console.error("Error updating person:", error);
+        console.error("Error deleting person:", error);
         throw new Error(`Failed to delete person: ${error.message}`);
       }
     },
+
+    // -------------------------------------------------------------------------
     // CRUD деревьев
+    // -------------------------------------------------------------------------
     createTree: async (
-      _parent: unknown,
+      _: unknown,
       args: { input: genealogy_treeCreateInput },
-      // context: { prisma: PrismaClient }
     ) => {
       try {
-        // const { prisma } = context;
-        const { input } = args;
-        const newTree = await prisma.genealogy_tree.create({
-          data: {
-            name: input.name,
-          },
+        return await prisma.genealogy_tree.create({
+          data: { name: args.input.name },
         });
-        return newTree;
       } catch (error: any) {
-        console.error("Error creating Tree", error);
+        console.error("Error creating tree", error);
         throw new Error(`Failed to create tree: ${error.message}`);
       }
     },
     updateTree: async (
-      _parent: unknown,
-      args: { input: genealogy_treeUpdateInput; id: string },
-      // context: { prisma: PrismaClient },
+      _: unknown,
+      args: { id: string; input: genealogy_treeUpdateInput },
     ) => {
       try {
-        // const { prisma } = context;
-        // const { input } = args;
-        // const updated_at = new Date();
-        const updatedTree = await prisma.genealogy_tree.update({
+        return await prisma.genealogy_tree.update({
           where: { id: args.id },
-          data: {
-            ...args.input,
-            // updated_at,
-          },
+          data: { ...args.input },
         });
-        return updatedTree;
       } catch (error: any) {
-        console.error("Error updating Tree:", error);
-        throw new Error(`Failed to update Tree: ${error.message}`);
+        console.error("Error updating tree:", error);
+        throw new Error(`Failed to update tree: ${error.message}`);
       }
     },
-    deleteTree: async (
-      _parent: unknown,
-      args: { id: string },
-      // context: { prisma: PrismaClient },
-    ) => {
+    deleteTree: async (_: unknown, args: { id: string }) => {
       try {
-        // const { prisma } = context;
-        const deletedTree = await prisma.genealogy_tree.delete({
+        const deleted = await prisma.genealogy_tree.delete({
           where: { id: args.id },
         });
-        return deletedTree !== null;
+        return deleted !== null;
       } catch (error: any) {
-        console.error("Error deleting Tree", error);
-        throw new Error(`Failed to delete Tree: ${error.message}`);
+        console.error("Error deleting tree", error);
+        throw new Error(`Failed to delete tree: ${error.message}`);
       }
     },
   },

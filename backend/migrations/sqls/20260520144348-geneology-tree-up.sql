@@ -23,7 +23,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trigger_update_updated_at
-    BEFORE UPDATE ON genealagy_tree
+    BEFORE UPDATE ON genealogy_tree
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
