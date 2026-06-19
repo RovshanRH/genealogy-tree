@@ -1,18 +1,13 @@
 /* Replace with your SQL commands */
 
-
 CREATE TABLE IF NOT EXISTS residence (
-    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    person_id           UUID NOT NULL REFERENCES person(id) ON DELETE CASCADE,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
+    country UUID REFERENCES country (id) ON DELETE SET NULL,
+    city UUID REFERENCES city (id) ON DELETE SET NULL,
+    street uuid REFERENCES street (id) ON DELETE SET NULL,
+    house uuid REFERENCES house (id) ON DELETE SET NULL,
+    apartment uuid REFERENCES apartment (id) ON DELETE SET NULL,
     
-    country_id          UUID REFERENCES country(id),
-    city_id             UUID REFERENCES city(id),
-    street              VARCHAR(200),
-    house               VARCHAR(50),
-    apartment           VARCHAR(50),
-    
-    start_date          DATE,
-    end_date            DATE,
-    start_date_approx   BOOLEAN DEFAULT false,
-    end_date_approx     BOOLEAN DEFAULT false
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );

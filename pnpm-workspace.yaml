@@ -1,0 +1,7 @@
+allowBuilds:
+  '@apollo/protobufjs': false
+  '@prisma/engines': false
+  bcrypt: false
+  esbuild: true
+  node-base64: false
+  prisma: false
