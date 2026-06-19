@@ -28,14 +28,15 @@ CREATE TABLE IF NOT EXISTS person (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
     genealogy_tree_id uuid,
     foreign key (genealogy_tree_id) REFERENCES genealogy_tree (id) on delete cascade,
-    mother uuid REFERENCES person (id),
-    father uuid REFERENCES person (id),
+    mother uuid REFERENCES person (id) ON DELETE SET NULL,
+    father uuid REFERENCES person (id) ON DELETE SET NULL,
+    spouse uuid REFERENCES person (id) ON DELETE SET NULL,
+
     marital_status marriage_status_type not null DEFAULT 'single',
-    spouse uuid REFERENCES person (id),
     -- Фамилия
-    surname UUID REFERENCES surname (id),
+    surname UUID REFERENCES surname (id) ON DELETE SET NULL,
     -- Девичья Фамилия
-    maidenSurname UUID REFERENCES maiden_surname (id),
+    maidenSurname UUID REFERENCES maiden_surname (id) ON DELETE SET NULL,
     firstName VARCHAR(200) NOT NULL,
     patronymic VARCHAR(200),
     fullName VARCHAR(500),
@@ -51,13 +52,13 @@ CREATE TABLE IF NOT EXISTS person (
     fullAddress VARCHAR(1000) [],
     cityAddress VARCHAR(1000) [],
     -- национальность
-    nationality UUID REFERENCES nationality (id),
+    nationality UUID REFERENCES nationality (id) ON DELETE SET NULL,
     -- социальный статус
-    socialStatus UUID REFERENCES social_status (id),
+    socialStatus UUID REFERENCES social_status (id) ON DELETE SET NULL,
     -- birthplace
-    birth_place uuid REFERENCES birth_place (id),
+    birth_place uuid REFERENCES birth_place (id) ON DELETE SET NULL,
     -- death_place
-    death_place uuid REFERENCES death_place (id),
+    death_place uuid REFERENCES death_place (id) ON DELETE SET NULL,
     bio TEXT,
     source_info TEXT,
     isPersonContacted BOOLEAN DEFAULT false,
@@ -81,8 +82,8 @@ add CONSTRAINT chk_maiden_surname CHECK (
 
 create table if not exists person_occupations (
     id uuid PRIMARY key DEFAULT gen_random_uuid (),
-    person_id uuid REFERENCES person (id),
-    occupation_id uuid REFERENCES occupation (id),
+    person_id uuid REFERENCES person (id) ON DELETE CASCADE,
+    occupation_id uuid REFERENCES occupation (id) ON DELETE CASCADE,
     start_date DATE,
     end_date DATE,
     is_primary BOOLEAN DEFAULT FALSE
@@ -90,16 +91,16 @@ create table if not exists person_occupations (
 
 create table if not exists person_educations (
     id uuid PRIMARY key DEFAULT gen_random_uuid (),
-    person_id uuid REFERENCES person (id),
-    education_id uuid REFERENCES education (id),
+    person_id uuid REFERENCES person (id) ON DELETE CASCADE,
+    education_id uuid REFERENCES education (id) ON DELETE CASCADE,
     entry_year INT,
     graduation_year INT
 )
 
 create table if not exists person_residentials (
     id uuid PRIMARY key DEFAULT gen_random_uuid (),
-    person_id uuid REFERENCES person (id),
-    residence_id uuid REFERENCES residence (id),
+    person_id uuid REFERENCES person (id) ON DELETE CASCADE,
+    residence_id uuid REFERENCES residence (id) ON DELETE CASCADE,
     start_date DATE,
     end_date DATE,
     start_date_approx BOOLEAN DEFAULT false,
@@ -127,10 +128,10 @@ create index if not exists idx_person_cityAddress on person (cityAddress);
 -- Таблица Отношщений
 create Table if not exists relations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-    fatherId UUID REFERENCES person (id),
-    motherId UUID REFERENCES person (id),
-    personId UUID REFERENCES person (id),
-    spouseId UUID REFERENCES person (id),
+    fatherId UUID REFERENCES person (id) ON DELETE CASCADE,
+    motherId UUID REFERENCES person (id) ON DELETE CASCADE,
+    personId UUID REFERENCES person (id) ON DELETE CASCADE,
+    spouseId UUID REFERENCES person (id) ON DELETE CASCADE,
     autoNaming VARCHAR(50),
     UNIQUE (
         fatherId,

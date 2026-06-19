@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS country (
 
 create table if not exists region (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-    country_id UUID REFERENCES country (id) ON DELETE RESTRICT,
+    country_id UUID REFERENCES country (id) ON DELETE CASCADE,
     name VARCHAR(100),
     UNIQUE (country_id, name),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -18,7 +18,7 @@ create table if not exists region (
 -- 3. Города
 CREATE TABLE IF NOT EXISTS city (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-    region_id UUID REFERENCES region (id) on delete restrict,
+    region_id UUID REFERENCES region (id) ON DELETE CASCADE,
     name VARCHAR(150),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS city (
 -- Улица
 CREATE Table if not exists street (
     id UUID Primary key DEFAULT gen_random_uuid (),
-    city_id UUID REFERENCES city (id) on delete RESTRICT,
+    city_id UUID REFERENCES city (id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     name VARCHAR(200) not null
@@ -36,7 +36,7 @@ CREATE Table if not exists street (
 
 CREATE Table if not exists house (
     id UUID Primary key DEFAULT gen_random_uuid (),
-    street_id UUID REFERENCES street (id) on delete RESTRICT,
+    street_id UUID REFERENCES street (id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     name VARCHAR(50) not null
@@ -44,7 +44,7 @@ CREATE Table if not exists house (
 
 create table if not exists apartment (
     id UUID Primary key DEFAULT gen_random_uuid (),
-    house_id UUID REFERENCES house (id) on delete RESTRICT,
+    house_id UUID REFERENCES house (id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     name VARCHAR(50) not null
