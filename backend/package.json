@@ -1,22 +1,32 @@
 {
-	"dependencies": {
-		"@apollo/server": "^5.5.1",
-		"bcrypt": "^6.0.0",
-		"graphql": "^16.14.0",
-		"nanoid": "^5.1.11",
-		"nodemon": "^3.1.14",
-		"pg": "^8.20.0"
-	},
-	"devDependencies": {
-		"@types/bcrypt": "^6.0.0",
-		"@types/pg": "^8.20.0",
-		"apollo-server": "^3.13.0",
-		"dotenv": "^17.4.2",
-		"prisma": "^7.8.0"
-	},
-	"graphql": {
-		"schema": "https://localhost:3001/graphql",
-		"documents": "**/*.{graphql,js,ts,jsx,tsx}"
-	},
-	"type": "module"
+  "dependencies": {
+    "@apollo/server": "^5.5.1",
+    "bcrypt": "^6.0.0",
+    "graphql": "^16.14.0",
+    "nanoid": "^5.1.11",
+    "nodemon": "^3.1.14",
+    "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "@jest/globals": "^30.4.1",
+    "@types/bcrypt": "^6.0.0",
+    "@types/jest": "^30.0.0",
+    "@types/pg": "^8.20.0",
+    "apollo-server": "^3.13.0",
+    "dotenv": "^17.4.2",
+    "jest": "^30.4.2",
+    "prisma": "^7.8.0",
+    "ts-jest": "^29.4.11"
+  },
+  "graphql": {
+    "schema": "https://localhost:3001/graphql",
+    "documents": "**/*.{graphql,js,ts,jsx,tsx}"
+  },
+  "type": "module",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:ci": "jest --ci --coverage --maxWorkers=2"
+  }
 }
