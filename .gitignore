@@ -28,3 +28,4 @@ database.json
 */generated/prisma
 
 backend/migrations/*.js
+*.txt

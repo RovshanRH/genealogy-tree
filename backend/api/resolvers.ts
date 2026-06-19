@@ -608,7 +608,8 @@ export const resolvers = {
         include: { person_occupations: true },
       });
     },
-    occupations: async () => prisma.occupation.findMany({ include: { person_occupations: true } }),
+    occupations: async () =>
+      prisma.occupation.findMany({ include: { person_occupations: true } }),
     person_occupations: async (_: unknown, args: { person_id: string }) => {
       return prisma.person_occupations.findMany({
         where: { person_id: args.person_id },
@@ -623,7 +624,8 @@ export const resolvers = {
         include: { person_educations: true },
       });
     },
-    educations: async () => prisma.education.findMany({ include: { person_educations: true } }),
+    educations: async () =>
+      prisma.education.findMany({ include: { person_educations: true } }),
     person_educations: async (_: unknown, args: { person_id: string }) => {
       return prisma.person_educations.findMany({
         where: { person_id: args.person_id },
@@ -633,32 +635,77 @@ export const resolvers = {
 
     // --- Места жительства ---
     residence: async (_: unknown, args: { id: string }) => {
-      return prisma.residence.findUnique({
-        where: { id: args.id },
-        include: {
-          country_residence_countryTocountry: true,
-          city_residence_cityTocity: { include: { region: true } },
-          street_residence_streetTostreet: true,
-          house_residence_houseTohouse: true,
-          apartment_residence_apartmentToapartment: true,
-        },
-      });
+      try {
+        return await prisma.residence.findUnique({
+          where: { id: args.id },
+          include: {
+            country_residence_countryTocountry: true,
+            city_residence_cityTocity: { 
+              include: { region: { include: { country: true } } } 
+            },
+            street_residence_streetTostreet: true,
+            house_residence_houseTohouse: true,
+            apartment_residence_apartmentToapartment: true,
+          },
+        });
+      } catch (error: any) {
+        console.error("Error finding residence", error);
+        throw new Error(`Failed to find residence: ${error.message}`);
+      }
     },
-    residentials: async () => prisma.residence.findMany({ /* include */ }),
+
+    residentials: async () => {
+      try {
+        return await prisma.residence.findMany({
+          include: {
+            country_residence_countryTocountry: true,
+            city_residence_cityTocity: { 
+              include: { region: { include: { country: true } } } 
+            },
+            street_residence_streetTostreet: true,
+            house_residence_houseTohouse: true,
+            apartment_residence_apartmentToapartment: true,
+          },
+        });
+      } catch (error: any) {
+        console.error("Error finding residentials", error);
+        throw new Error(`Failed to find residentials: ${error.message}`);
+      }
+    },
+
     person_residentials: async (_: unknown, args: { person_id: string }) => {
-      return prisma.person_residentials.findMany({
-        where: { person_id: args.person_id },
-        include: {
-          residence: {
-            include: {
-              country_residence_countryTocountry: true,
-              city_residence_cityTocity: { include: { region: true } },
-              // ... другие гео-поля
+      try {
+        return await prisma.person_residentials.findMany({
+          where: { person_id: args.person_id },
+          include: {
+            person: true,
+            residence: {
+              include: {
+                country_residence_countryTocountry: true,
+                city_residence_cityTocity: { 
+                  include: { region: { include: { country: true } } } 
+                },
+                street_residence_streetTostreet: true,
+                house_residence_houseTohouse: true,
+                apartment_residence_apartmentToapartment: true,
+              },
             },
           },
-        },
-      });
+        });
+      } catch (error: any) {
+        console.error("Error finding person_residentials", error);
+        throw new Error(`Failed to find person residentials: ${error.message}`);
+      }
     },
+
+    // Residence: {
+    //   country: (parent: any) => parent.country_residence_countryTocountry,
+    //   city: (parent: any) => parent.city_residence_cityTocity,
+    //   street: (parent: any) => parent.street_residence_streetTostreet,
+    //   house: (parent: any) => parent.house_residence_houseTohouse,
+    //   apartment: (parent: any) =>
+    //     parent.apartment_residence_apartmentToapartment,
+    // },
 
     // --- Отношения ---
     relations: async () => {
@@ -968,7 +1015,7 @@ export const resolvers = {
         throw new Error(`Failed to delete tree: ${error.message}`);
       }
     },
-        // ====================== OCCUPATION ======================
+    // ====================== OCCUPATION ======================
     createOccupation: async (_: unknown, args: { input: any }) => {
       try {
         return await prisma.occupation.create({
@@ -1013,7 +1060,9 @@ export const resolvers = {
           data: {
             person_id: args.input.personId,
             occupation_id: args.input.occupationId,
-            start_date: args.input.startDate ? new Date(args.input.startDate) : null,
+            start_date: args.input.startDate
+              ? new Date(args.input.startDate)
+              : null,
             end_date: args.input.endDate ? new Date(args.input.endDate) : null,
             is_primary: args.input.isPrimary ?? false,
           },
@@ -1106,46 +1155,82 @@ export const resolvers = {
       }
     },
 
-        // ====================== RESIDENCE ======================
+    // ====================== RESIDENCE ======================
 
     // Создание самого места жительства (справочник)
     createResidence: async (_: unknown, args: { input: any }) => {
       try {
         const residence = await prisma.$transaction(async (tx) => {
-          const input = args.input;
+          const input = args.input || {};
+          console.log("[createResidence] START", input);
 
-          // Создаём/находим гео-объекты
-          const country = await new personDataBuilder().createOrFindCountry(tx, input.country);
-          const city = await new personDataBuilder().createOrFindCity(tx, input.city);
-          const street = await new personDataBuilder().createOrFindStreet(tx, input.street);
-          const house = await new personDataBuilder().createOrFindHouse(tx, input.house);
-          const apartment = await new personDataBuilder().createOrFindApartment(tx, input.apartment);
+          const builder = new personDataBuilder();
 
+          // 1. Создаём/находим гео-объекты
+          const geo = await builder.createOrFindResidenceGeo(tx, input);
+
+          // 2. Создаём residence через relation connect (Prisma-friendly способ)
           const newResidence = await tx.residence.create({
             data: {
-              country: country?.id ?? null,
-              city: city?.id ?? null,
-              street: street?.id ?? null,
-              house: house?.id ?? null,
-              apartment: apartment?.id ?? null,
+              ...(geo.country
+                ? {
+                    country_residence_countryTocountry: {
+                      connect: { id: geo.country.id },
+                    },
+                  }
+                : {}),
+              ...(geo.city
+                ? {
+                    city_residence_cityTocity: { connect: { id: geo.city.id } },
+                  }
+                : {}),
+              ...(geo.street
+                ? {
+                    street_residence_streetTostreet: {
+                      connect: { id: geo.street.id },
+                    },
+                  }
+                : {}),
+              ...(geo.house
+                ? {
+                    house_residence_houseTohouse: {
+                      connect: { id: geo.house.id },
+                    },
+                  }
+                : {}),
+              ...(geo.apartment
+                ? {
+                    apartment_residence_apartmentToapartment: {
+                      connect: { id: geo.apartment.id },
+                    },
+                  }
+                : {}),
 
-              start_date: input.start_date ? new Date(input.start_date) : null,
-              end_date: input.end_date ? new Date(input.end_date) : null,
-              start_date_approx: input.start_date_approx ?? false,
-              end_date_approx: input.end_date_approx ?? false,
+              // start_date: input.start_date ? new Date(input.start_date) : null,
+              // end_date: input.end_date ? new Date(input.end_date) : null,
+              // start_date_approx: input.start_date_approx ?? false,
+              // end_date_approx: input.end_date_approx ?? false,
             },
           });
 
-          return await tx.residence.findUnique({
+          // 3. Получаем полный объект
+          const fullResidence = await tx.residence.findUnique({
             where: { id: newResidence.id },
             include: {
               country_residence_countryTocountry: true,
-              city_residence_cityTocity: { include: { region: true } },
+              city_residence_cityTocity: {
+                include: { region: { include: { country: true } } },
+              },
               street_residence_streetTostreet: true,
               house_residence_houseTohouse: true,
-              apartment_residence_apartmentToapartment: true,
+              apartment_residence_apartmentToapartment: {
+                include: { house: true },
+              },
             },
           });
+
+          console.log("[createResidence] SUCCESS", { id: fullResidence?.id });
+          return fullResidence;
         });
 
         return residence;
@@ -1162,7 +1247,9 @@ export const resolvers = {
           data: {
             person_id: args.input.personId,
             residence_id: args.input.residenceId,
-            start_date: args.input.startDate ? new Date(args.input.startDate) : null,
+            start_date: args.input.startDate
+              ? new Date(args.input.startDate)
+              : null,
             end_date: args.input.endDate ? new Date(args.input.endDate) : null,
             start_date_approx: args.input.startDateApprox ?? false,
             end_date_approx: args.input.endDateApprox ?? false,
@@ -1217,8 +1304,12 @@ export const resolvers = {
             street: args.input.street,
             house: args.input.house,
             apartment: args.input.apartment,
-            start_date: args.input.start_date ? new Date(args.input.start_date) : undefined,
-            end_date: args.input.end_date ? new Date(args.input.end_date) : undefined,
+            start_date: args.input.start_date
+              ? new Date(args.input.start_date)
+              : undefined,
+            end_date: args.input.end_date
+              ? new Date(args.input.end_date)
+              : undefined,
             start_date_approx: args.input.start_date_approx,
             end_date_approx: args.input.end_date_approx,
           },
@@ -1245,5 +1336,12 @@ export const resolvers = {
         throw new Error(`Failed to delete residence: ${error.message}`);
       }
     },
+  },
+  Residence: {
+    country: (parent: any) => parent.country_residence_countryTocountry,
+    city: (parent: any) => parent.city_residence_cityTocity,
+    street: (parent: any) => parent.street_residence_streetTostreet,
+    house: (parent: any) => parent.house_residence_houseTohouse,
+    apartment: (parent: any) => parent.apartment_residence_apartmentToapartment,
   },
 };

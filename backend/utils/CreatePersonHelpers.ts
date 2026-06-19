@@ -45,6 +45,17 @@ type CreatePersonArgsInput = {
 };
 
 export class personDataBuilder {
+  async createOrFindResidenceGeo(tx: any, input: any) {
+    console.log("[createOrFindResidenceGeo] START", input);
+
+    return {
+      country: await this.createOrFindCountry(tx, input?.country),
+      city: await this.createOrFindCity(tx, input?.city),
+      street: await this.createOrFindStreet(tx, input?.street),
+      house: await this.createOrFindHouse(tx, input?.house),
+      apartment: await this.createOrFindApartment(tx, input?.apartment),
+    };
+  }
   async createOrFindSurname(tx: any, input?: LookupInput | null) {
     console.log("[createOrFindSurname] START", { input });
 
@@ -186,22 +197,18 @@ export class personDataBuilder {
   async createOrFindCountry(tx: any, input?: LookupInput | null) {
     console.log("[createOrFindCountry] START", { input });
 
-    if (input?.name == null) {
-      console.log("[createOrFindCountry] Input name is null, returning null");
-      return null;
-    }
+    if (!input?.name) return null;
 
-    const name = normalizeText(input?.name);
-    console.log("[createOrFindCountry] Normalized name:", name);
+    const name = normalizeText(input.name);
 
     try {
       const country =
-        (await tx.country.findFirst({ where: { name: name } })) ??
-        (await tx.country.create({ data: { name: name } }));
+        (await tx.country.findFirst({ where: { name } })) ??
+        (await tx.country.create({ data: { name } }));
 
       console.log("[createOrFindCountry] SUCCESS", {
-        countryId: country?.id,
-        name: country?.name,
+        countryId: country.id,
+        name,
       });
       return country;
     } catch (error) {
@@ -446,26 +453,15 @@ export class personDataBuilder {
     if (input?.birth_date) {
       try {
         birthDate = new Date(input.birth_date);
-        if (isNaN(birthDate.getTime())) {
-          console.warn(
-            "[createOrFindBirthPlace] Invalid date:",
-            input.birth_date,
-          );
-          birthDate = null;
-        } else {
-          console.log("[createOrFindBirthPlace] Parsed birth date:", birthDate);
-        }
-      } catch (error) {
-        console.warn("[createOrFindBirthPlace] Error parsing date:", error);
+        if (isNaN(birthDate.getTime())) birthDate = null;
+      } catch {
         birthDate = null;
       }
     }
 
-    const birthDateApprox = input?.birth_date_approx ?? true;
-    console.log("[createOrFindBirthPlace] Birth date approx:", birthDateApprox);
+    const birthDateApprox = input?.birth_date_approx ?? false;
 
-    // Строим where условия динамически
-    const whereConditions: any = {
+    const where: any = {
       birth_date_approx: birthDateApprox,
       birth_place_country_id: country?.id ?? null,
       birth_place_city_id: city?.id ?? null,
@@ -474,28 +470,20 @@ export class personDataBuilder {
       birth_place_apartment: apartment?.id ?? null,
     };
 
-    if (birthDate) {
-      whereConditions.birth_date = birthDate;
-    }
-
-    console.log("[createOrFindBirthPlace] Where conditions:", whereConditions);
+    if (birthDate) where.birth_date = birthDate;
 
     try {
       const birthplace =
-        (await tx.birth_place.findFirst({
-          where: whereConditions,
-        })) ??
+        (await tx.birth_place.findFirst({ where })) ??
         (await tx.birth_place.create({
           data: {
             ...(birthDate ? { birth_date: birthDate } : {}),
             birth_date_approx: birthDateApprox,
-            ...(country ? { country: { connect: { id: country.id } } } : {}),
-            ...(city ? { city: { connect: { id: city.id } } } : {}),
-            ...(street ? { street: { connect: { id: street.id } } } : {}),
-            ...(house ? { house: { connect: { id: house.id } } } : {}),
-            ...(apartment
-              ? { apartment: { connect: { id: apartment.id } } }
-              : {}),
+            birth_place_country_id: country?.id ?? null,
+            birth_place_city_id: city?.id ?? null,
+            birth_place_street: street?.id ?? null,
+            birth_place_house: house?.id ?? null,
+            birth_place_apartment: apartment?.id ?? null,
           },
         }));
 
@@ -511,58 +499,41 @@ export class personDataBuilder {
 
   async createOrFindDeathPlace(tx: any, input?: LookupInput | null) {
     console.log("[createOrFindDeathPlace] START", { input });
-    console.log("[createOrFindDeathPlace] Creating/finding city...");
+
     const city = await this.createOrFindCity(tx, input?.city);
-    console.log("[createOrFindDeathPlace] Creating/finding country...");
     const country = await this.createOrFindCountry(tx, input?.country);
 
-    console.log("[createOrFindDeathPlace] Locations found:", {
-      city: city ? { id: city.id, name: city.name } : null,
-      country: country ? { id: country.id, name: country.name } : null,
-    });
-
-    // Парсим дату смерти
     let deathDate: Date | null = null;
     if (input?.death_date) {
       try {
         deathDate = new Date(input.death_date);
-        if (isNaN(deathDate.getTime())) {
-          console.warn(
-            "[createOrFindDeathPlace] Invalid death date:",
-            input.death_date,
-          );
-          deathDate = null;
-        } else {
-          console.log("[createOrFindDeathPlace] Parsed death date:", deathDate);
-        }
-      } catch (error) {
-        console.warn(
-          "[createOrFindDeathPlace] Error parsing death date:",
-          error,
-        );
+        if (isNaN(deathDate.getTime())) deathDate = null;
+      } catch {
         deathDate = null;
       }
     }
 
-    const deathDateApprox = input?.death_date_approx;
-    console.log("[createOrFindDeathPlace] Death date approx:", deathDateApprox);
+    const deathDateApprox = input?.death_date_approx ?? false;
+
+    const where: any = {
+      death_date_approx: deathDateApprox,
+      death_place_country_id: country?.id ?? null,
+      death_place_city_id: city?.id ?? null,
+    };
+
+    if (deathDate) {
+      where.death_date = deathDate;
+    }
 
     try {
       const deathplace =
-        (await tx.death_place.findFirst({
-          where: {
-            ...(deathDate ? { death_date: deathDate } : {}),
-            death_date_approx: deathDateApprox,
-            city: city?.id ?? null,
-            country: country?.id ?? null,
-          },
-        })) ??
+        (await tx.death_place.findFirst({ where })) ??
         (await tx.death_place.create({
           data: {
             ...(deathDate ? { death_date: deathDate } : {}),
             death_date_approx: deathDateApprox,
-            ...(country ? { country: { connect: { id: country.id } } } : {}),
-            ...(city ? { city: { connect: { id: city.id } } } : {}),
+            death_place_country_id: country?.id ?? null,
+            death_place_city_id: city?.id ?? null,
           },
         }));
 

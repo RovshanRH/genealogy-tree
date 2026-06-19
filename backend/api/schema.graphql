@@ -163,10 +163,10 @@ type Residence {
   house: House
   apartment: Apartment
 
-  start_date: String
-  end_date: String
-  start_date_approx: Boolean
-  end_date_approx: Boolean
+  # start_date: String
+  # end_date: String
+  # start_date_approx: Boolean
+  # end_date_approx: Boolean
 }
 
 # person_residentials — связующая таблица person ↔ residence
@@ -188,10 +188,10 @@ input ResidenceInput {
   house: HouseInput
   apartment: ApartmentInput
 
-  start_date: String
-  end_date: String
-  start_date_approx: Boolean
-  end_date_approx: Boolean
+  # start_date: String
+  # end_date: String
+  # start_date_approx: Boolean
+  # end_date_approx: Boolean
 }
 
 input PersonResidentialInput {
