@@ -589,8 +589,8 @@ type Query {
 
 type Mutation {
   # Person
-  createPerson(input: CreatePersonInput!): PersonWithRelations!
-  updatePerson(id: ID!, input: UpdatePersonInput!): PersonWithRelations!
+  createPerson(input: CreatePersonInput!): Person!
+  updatePerson(id: ID!, input: UpdatePersonInput!): Person!
   deletePerson(id: ID!): Person!
 
   # Tree

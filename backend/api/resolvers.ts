@@ -838,14 +838,15 @@ export const resolvers = {
     // -------------------------------------------------------------------------
     // updatePerson
     // -------------------------------------------------------------------------
-    updatePerson: async (
+        updatePerson: async (
       _: unknown,
       args: {
         id: string;
-        input: personUpdateInput;
-        motherId?: string | null;
-        fatherId?: string | null;
-        spouseId?: string | null;
+        input: personUpdateInput & {
+          mother_id?: string | null;
+          father_id?: string | null;
+          spouse_id?: string | null;
+        };
       },
     ) => {
       try {
@@ -855,9 +856,24 @@ export const resolvers = {
           });
           if (!oldPerson) throw new Error("Person not found");
 
+          const personBuilder = new personDataBuilder();
+
+          // 1. Обрабатываем вложенные данные через builder
+          const builderData = await personBuilder.buildData(
+            tx,
+            args.input,
+            "update",
+          );
+
+          // Связи передаются ВНУТРИ input (mother_id / father_id / spouse_id),
+          // а не отдельными top-level аргументами мутации.
+          const motherId = args.input.mother_id;
+          const fatherId = args.input.father_id;
+          const spouseId = args.input.spouse_id;
+
           // [checkMaritalStatus]
           const newSpouseId =
-            args.spouseId !== undefined ? args.spouseId : oldPerson.spouse;
+            spouseId !== undefined ? spouseId : oldPerson.spouse;
           const newMaritalStatus =
             (args.input as any).marital_status ?? oldPerson.marital_status;
 
@@ -867,27 +883,33 @@ export const resolvers = {
           );
 
           // [setAliveStatus]
-          const newDeathPlace =
-            (args.input as any).death_place !== undefined
-              ? (args.input as any).death_place
-              : oldPerson.death_place;
-          const isalive = computeIsAlive(newDeathPlace);
+          const newDeathPlaceId = builderData.death_place ?? oldPerson.death_place;
+          const isalive = computeIsAlive(newDeathPlaceId);
 
-          // Собираем данные обновления
+          // 2. Собираем данные для обновления
           const updateData: any = {
-            ...args.input,
+            ...builderData,        // surname, nationality, birth_place, death_place и т.д.
             isalive,
+            marital_status: newMaritalStatus,
           };
-          if (args.motherId !== undefined) updateData.mother = args.motherId;
-          if (args.fatherId !== undefined) updateData.father = args.fatherId;
-          if (args.spouseId !== undefined) updateData.spouse = args.spouseId;
 
+          // Переопределяем связи, если переданы явно
+          if (motherId !== undefined) updateData.mother = motherId;
+          if (fatherId !== undefined) updateData.father = fatherId;
+          if (spouseId !== undefined) updateData.spouse = spouseId;
+
+          // Убираем поля, которые нельзя обновлять напрямую (id, created_at и т.д.)
+          delete updateData.id;
+          delete updateData.created_at;
+          delete updateData.updated_at;
+
+          // 3. Обновляем персонажа
           const updated = await tx.person.update({
             where: { id: args.id },
             data: updateData,
           });
 
-          // [autoFillingRows]
+          // 4. [autoFillingRows] — fullname, fulladdress, cityaddress
           const autoFields = await buildAutoFilledFields(
             tx,
             updated.id,
@@ -901,7 +923,7 @@ export const resolvers = {
             data: autoFields,
           });
 
-          // [relationCRUD UPDATE]
+          // 5. [relationCRUD UPDATE]
           await insertRelation(
             tx,
             withAutoFields.id,
@@ -910,7 +932,7 @@ export const resolvers = {
             withAutoFields.spouse,
           );
 
-          // [countCharacters UPDATE]
+          // 6. [countCharacters UPDATE]
           await updateTreeCounters(
             tx,
             {
@@ -931,7 +953,7 @@ export const resolvers = {
             },
           );
 
-          // ←←← ИСПРАВЛЕНИЕ: используем красивый вывод
+          // 7. Возвращаем красивый полный объект
           return await getFullPersonWithNiceFields(tx, withAutoFields.id);
         });
 

@@ -547,8 +547,12 @@ export class personDataBuilder {
     }
   }
 
-  async buildData(tx: any, input?: any | null) {
-    console.log("[buildData] START", { input });
+  async buildData(
+    tx: any,
+    input?: any | null,
+    mode: "create" | "update" = "create",
+  ) {
+    console.log("[buildData] START", { input, mode });
 
     const surname = await this.createOrFindSurname(tx, input.surname);
     const maidensurname = await this.createOrFindMaidenSurname(
@@ -567,16 +571,30 @@ export class personDataBuilder {
     const deathPlace = await this.createOrFindDeathPlace(tx, input.death_place);
 
     // Используем ПРАВИЛЬНЫЕ названия полей из схемы
+    // В режиме "update" НЕЛЬЗЯ подставлять дефолты — если поле не передано,
+    // оно должно остаться undefined, чтобы Prisma его не трогало.
+    const isCreate = mode === "create";
     const data: any = {
       firstname: input.firstname,
       patronymic: input.patronymic,
-      age: input.age || 0,
-      gender: input.gender || "unknown",
+      age: input.age !== undefined ? input.age : isCreate ? 0 : undefined,
+      gender:
+        input.gender !== undefined ? input.gender : isCreate ? "male" : undefined,
       bio: input.bio,
       source_info: input.source_info,
-      ispersoncontacted: input.ispersoncontacted ?? false,
+      ispersoncontacted:
+        input.ispersoncontacted !== undefined
+          ? input.ispersoncontacted
+          : isCreate
+            ? false
+            : undefined,
       isalive: input.isalive,
-      marital_status: input.marital_status || "single",
+      marital_status:
+        input.marital_status !== undefined
+          ? input.marital_status
+          : isCreate
+            ? "single"
+            : undefined,
     };
 
     // Добавляем связи - используем правильные имена полей из схемы
